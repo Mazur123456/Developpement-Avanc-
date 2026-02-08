@@ -1,0 +1,45 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----< org.univ_paris8.iut.montreuil.qdev.tp2025.gr.TpJee:TP_JEE_1 >-----
+[INFO] Building TP_JEE_1 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ war ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ TP_JEE_1 ---
+[INFO] Deleting C:\Users\jakub\Documents\Projets\Projets Universitaire\BUT 3\S6.R5\Developpement-Avanc-\Developpement-Avanc-\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ TP_JEE_1 ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ TP_JEE_1 ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 36 source files with javac [debug target 11] to target\classes
+[INFO] -------------------------------------------------------------
+[WARNING] COMPILATION WARNING : 
+[INFO] -------------------------------------------------------------
+[WARNING] system modules path not set in conjunction with -source 11
+[INFO] 1 warning
+[INFO] -------------------------------------------------------------
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /C:/Users/jakub/Documents/Projets/Projets Universitaire/BUT 3/S6.R5/Developpement-Avanc-/Developpement-Avanc-/src/main/java/org/univ_paris8/iut/montreuil/qdev/tp2025/gr/tpjee/tp_jee_1/service/CategoryService.java:[41,13] unreported exception org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.ValidationUtil.ValidationException; must be caught or declared to be thrown
+[ERROR] /C:/Users/jakub/Documents/Projets/Projets Universitaire/BUT 3/S6.R5/Developpement-Avanc-/Developpement-Avanc-/src/main/java/org/univ_paris8/iut/montreuil/qdev/tp2025/gr/tpjee/tp_jee_1/service/CategoryService.java:[105,13] unreported exception org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.ValidationUtil.ValidationException; must be caught or declared to be thrown
+[INFO] 2 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.321 s
+[INFO] Finished at: 2026-02-08T17:40:58+01:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.13.0:compile (default-compile) on project TP_JEE_1: Compilation failure: Compilation failure: 
+[ERROR] /C:/Users/jakub/Documents/Projets/Projets Universitaire/BUT 3/S6.R5/Developpement-Avanc-/Developpement-Avanc-/src/main/java/org/univ_paris8/iut/montreuil/qdev/tp2025/gr/tpjee/tp_jee_1/service/CategoryService.java:[41,13] unreported exception org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.ValidationUtil.ValidationException; must be caught or declared to be thrown
+[ERROR] /C:/Users/jakub/Documents/Projets/Projets Universitaire/BUT 3/S6.R5/Developpement-Avanc-/Developpement-Avanc-/src/main/java/org/univ_paris8/iut/montreuil/qdev/tp2025/gr/tpjee/tp_jee_1/service/CategoryService.java:[105,13] unreported exception org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.ValidationUtil.ValidationException; must be caught or declared to be thrown
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

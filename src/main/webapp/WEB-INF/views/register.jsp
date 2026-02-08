@@ -1,0 +1,146 @@
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+        <!DOCTYPE html>
+        <html lang="fr">
+
+        <head>
+            <title>Inscription - MasterAnnonce</title>
+            <style>
+                * {
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    font-family: Arial, sans-serif;
+                    background: #f5f5f5;
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .container {
+                    background: white;
+                    padding: 2rem;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                    width: 100%;
+                    max-width: 400px;
+                }
+
+                h1 {
+                    text-align: center;
+                    margin-bottom: 1.5rem;
+                    color: #333;
+                }
+
+                .form-group {
+                    margin-bottom: 1rem;
+                }
+
+                label {
+                    display: block;
+                    margin-bottom: 0.5rem;
+                    font-weight: bold;
+                }
+
+                input {
+                    width: 100%;
+                    padding: 0.75rem;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-size: 1rem;
+                }
+
+                input:focus {
+                    outline: none;
+                    border-color: #28a745;
+                }
+
+                button {
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: #28a745;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 1rem;
+                    cursor: pointer;
+                }
+
+                button:hover {
+                    background: #218838;
+                }
+
+                .error {
+                    background: #f8d7da;
+                    color: #721c24;
+                    padding: 0.75rem;
+                    border-radius: 4px;
+                    margin-bottom: 1rem;
+                }
+
+                .links {
+                    text-align: center;
+                    margin-top: 1rem;
+                }
+
+                .links a {
+                    color: #007bff;
+                    text-decoration: none;
+                }
+
+                .field-error {
+                    color: #dc3545;
+                    font-size: 0.875rem;
+                    margin-top: 0.25rem;
+                }
+            </style>
+        </head>
+
+        <body>
+            <div class="container">
+                <h1>Inscription</h1>
+
+                <c:if test="${not empty error}">
+                    <div class="error">${error}</div>
+                </c:if>
+
+                <form method="post" action="${pageContext.request.contextPath}/register">
+                    <div class="form-group">
+                        <label for="username">Nom d'utilisateur</label>
+                        <input type="text" id="username" name="username" value="${username}" required minlength="3">
+                        <c:if test="${not empty errors['username']}">
+                            <div class="field-error">${errors['username']}</div>
+                        </c:if>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="${email}" required>
+                        <c:if test="${not empty errors['email']}">
+                            <div class="field-error">${errors['email']}</div>
+                        </c:if>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Mot de passe</label>
+                        <input type="password" id="password" name="password" required minlength="6">
+                        <c:if test="${not empty errors['password']}">
+                            <div class="field-error">${errors['password']}</div>
+                        </c:if>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirmer le mot de passe</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required>
+                    </div>
+                    <button type="submit">S'inscrire</button>
+                </form>
+
+                <div class="links">
+                    <p>Déjà un compte ? <a href="${pageContext.request.contextPath}/login">Se connecter</a></p>
+                </div>
+            </div>
+        </body>
+
+        </html>

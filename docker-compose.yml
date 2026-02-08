@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  db:
+    image: postgres:16
+    container_name: master_annonce_db
+    environment:
+      POSTGRES_DB: master_annonce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/main/resources/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+
+  # Serveur Tomcat avec l'application
+  tomcat:
+    build: .
+    container_name: master_annonce_app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      # Variables pour la connexion à la base de données
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: master_annonce
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+
+networks:
+  app-network:
+    driver: bridge
