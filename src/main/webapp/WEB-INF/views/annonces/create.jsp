@@ -118,7 +118,9 @@
                 <div><strong>MasterAnnonce</strong></div>
                 <div>
                     <a href="${pageContext.request.contextPath}/annonces">Annonces</a>
-                    <span>| ${sessionScope.username}</span>
+                    <span>|
+                        <c:out value="${sessionScope.username}" />
+                    </span>
                     <a href="${pageContext.request.contextPath}/logout">Déconnexion</a>
                 </div>
             </nav>
@@ -132,22 +134,30 @@
                     <h1>Créer une annonce</h1>
 
                     <c:if test="${not empty error}">
-                        <div class="error">${error}</div>
+                        <div class="error">
+                            <c:out value="${error}" />
+                        </div>
                     </c:if>
 
                     <form method="post" action="${pageContext.request.contextPath}/annonce/create">
                         <div class="form-group">
                             <label for="title">Titre *</label>
-                            <input type="text" id="title" name="title" value="${title}" required maxlength="64">
+                            <input type="text" id="title" name="title" value="<c:out value=" ${title}" />" required
+                            maxlength="64">
                             <c:if test="${not empty errors['title']}">
-                                <div class="field-error">${errors['title']}</div>
+                                <div class="field-error">
+                                    <c:out value="${errors['title']}" />
+                                </div>
                             </c:if>
                         </div>
                         <div class="form-group">
                             <label for="description">Description</label>
-                            <textarea id="description" name="description" maxlength="256">${description}</textarea>
+                            <textarea id="description" name="description"
+                                maxlength="256"><c:out value="${description}"/></textarea>
                             <c:if test="${not empty errors['description']}">
-                                <div class="field-error">${errors['description']}</div>
+                                <div class="field-error">
+                                    <c:out value="${errors['description']}" />
+                                </div>
                             </c:if>
                         </div>
                         <div class="form-group">
@@ -155,23 +165,29 @@
                             <select id="categoryId" name="categoryId">
                                 <option value="">-- Sélectionner --</option>
                                 <c:forEach var="cat" items="${categories}">
-                                    <option value="${cat.id}" ${categoryId==cat.id ? 'selected' : '' }>${cat.label}
+                                    <option value="${cat.id}" ${categoryId==cat.id ? 'selected' : '' }>
+                                        <c:out value="${cat.label}" />
                                     </option>
                                 </c:forEach>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="adress">Adresse</label>
-                            <input type="text" id="adress" name="adress" value="${adress}" maxlength="64">
+                            <input type="text" id="adress" name="adress" value="<c:out value=" ${adress}" />"
+                            maxlength="64">
                             <c:if test="${not empty errors['adress']}">
-                                <div class="field-error">${errors['adress']}</div>
+                                <div class="field-error">
+                                    <c:out value="${errors['adress']}" />
+                                </div>
                             </c:if>
                         </div>
                         <div class="form-group">
                             <label for="mail">Email de contact</label>
-                            <input type="email" id="mail" name="mail" value="${mail}" maxlength="64">
+                            <input type="email" id="mail" name="mail" value="<c:out value=" ${mail}" />" maxlength="64">
                             <c:if test="${not empty errors['mail']}">
-                                <div class="field-error">${errors['mail']}</div>
+                                <div class="field-error">
+                                    <c:out value="${errors['mail']}" />
+                                </div>
                             </c:if>
                         </div>
                         <button type="submit">Créer l'annonce</button>

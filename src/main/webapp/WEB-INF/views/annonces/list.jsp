@@ -2,7 +2,7 @@
     <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
         <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
             <!DOCTYPE html>
-            <html>
+            <html lang="fr">
 
             <head>
                 <title>Annonces - MasterAnnonce</title>
@@ -64,6 +64,15 @@
                         color: #333;
                     }
 
+                    .annonce-card h2 a {
+                        color: #333;
+                        text-decoration: none;
+                    }
+
+                    .annonce-card h2 a:hover {
+                        color: #007bff;
+                    }
+
                     .annonce-card p {
                         color: #666;
                         margin-bottom: 0.5rem;
@@ -74,7 +83,7 @@
                         color: #888;
                     }
 
-                    .annonce-card .status {
+                    .status {
                         display: inline-block;
                         padding: 0.25rem 0.5rem;
                         border-radius: 4px;
@@ -148,7 +157,9 @@
                         <c:choose>
                             <c:when test="${not empty sessionScope.user}">
                                 <a href="${pageContext.request.contextPath}/annonce/create">+ Créer</a>
-                                <span>| ${sessionScope.username}</span>
+                                <span>|
+                                    <c:out value="${sessionScope.username}" />
+                                </span>
                                 <a href="${pageContext.request.contextPath}/logout">Déconnexion</a>
                             </c:when>
                             <c:otherwise>
@@ -175,14 +186,19 @@
                     <div class="annonces">
                         <c:forEach var="annonce" items="${annonces}">
                             <div class="annonce-card">
-                                <h2><a
-                                        href="${pageContext.request.contextPath}/annonce/detail?id=${annonce.id}">${annonce.title}</a>
-                                </h2>
-                                <p>${annonce.description}</p>
+                                <h2><a href="${pageContext.request.contextPath}/annonce/detail?id=${annonce.id}">
+                                        <c:out value="${annonce.title}" />
+                                    </a></h2>
+                                <p>
+                                    <c:out value="${annonce.description}" />
+                                </p>
                                 <div class="meta">
-                                    <span class="status status-${annonce.status}">${annonce.status}</span>
+                                    <span class="status status-${annonce.status}">
+                                        <c:out value="${annonce.status}" />
+                                    </span>
                                     <c:if test="${not empty annonce.category}">
-                                        | Catégorie: ${annonce.category.label}
+                                        | Catégorie:
+                                        <c:out value="${annonce.category.label}" />
                                     </c:if>
                                     |
                                     <fmt:formatDate value="${annonce.date}" pattern="dd/MM/yyyy HH:mm" />
@@ -195,7 +211,9 @@
                         <div class="pagination">
                             <c:forEach begin="1" end="${totalPages}" var="i">
                                 <a href="${pageContext.request.contextPath}/annonces?page=${i}"
-                                    class="${currentPage == i ? 'active' : ''}">${i}</a>
+                                    class="${currentPage == i ? 'active' : ''}">
+                                    <c:out value="${i}" />
+                                </a>
                             </c:forEach>
                         </div>
                     </c:if>

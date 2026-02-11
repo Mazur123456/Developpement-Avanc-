@@ -11,6 +11,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -56,6 +57,9 @@ public class AnnonceEditServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        HttpSession session = request.getSession(false);
+        Long userId = (Long) session.getAttribute("userId");
+
         String idParam = request.getParameter("id");
         String title = request.getParameter("title");
         String description = request.getParameter("description");
@@ -70,8 +74,10 @@ public class AnnonceEditServlet extends HttpServlet {
                 categoryId = Long.parseLong(categoryIdStr);
             }
 
-            annonceService.update(id, title, description, adress, mail, categoryId);
+            annonceService.update(id, title, description, adress, mail, categoryId, userId);
             response.sendRedirect(request.getContextPath() + "/annonce/detail?id=" + id);
+        } catch (SecurityException e) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
         } catch (ValidationUtil.ValidationException e) {
             request.setAttribute("errors", e.getErrors());
             request.setAttribute("error", "Veuillez corriger les erreurs du formulaire");

@@ -1,25 +1,26 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service;
 
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.User;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.repository.UserRepository;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.JPAUtil;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.PasswordUtil;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.ValidationUtil;
 
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-import javax.persistence.TypedQuery;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Service métier pour la gestion des utilisateurs
- * Les transactions sont gérées ici, pas dans les Servlets
+ * Service métier pour la gestion des utilisateurs.
+ * Les transactions sont gérées ici, pas dans les Repositories ni les Servlets.
+ * Les mots de passe sont hachés avec SHA-256 avant stockage.
  */
 public class UserService {
 
-    private static final String PARAM_USERNAME = "username";
+    private final UserRepository userRepository = new UserRepository();
 
     /**
-     * Inscrit un nouvel utilisateur
+     * Inscrit un nouvel utilisateur (mot de passe haché)
      */
     public User register(String username, String email, String password) throws ValidationUtil.ValidationException {
         EntityManager em = JPAUtil.getEntityManager();
@@ -27,19 +28,21 @@ public class UserService {
             em.getTransaction().begin();
 
             // Vérifier si le username existe déjà
-            if (existsByUsername(em, username)) {
+            if (userRepository.existsByUsername(em, username)) {
                 throw new IllegalArgumentException("Ce nom d'utilisateur existe déjà");
             }
 
             // Vérifier si l'email existe déjà
-            if (existsByEmail(em, email)) {
+            if (userRepository.existsByEmail(em, email)) {
                 throw new IllegalArgumentException("Cet email est déjà utilisé");
             }
 
-            User user = new User(username, email, password);
+            // Hacher le mot de passe avant stockage
+            String hashedPassword = PasswordUtil.hashPassword(password);
+            User user = new User(username, email, hashedPassword);
             ValidationUtil.validateAndThrow(user);
 
-            em.persist(user);
+            userRepository.create(em, user);
             em.getTransaction().commit();
             return user;
         } catch (Exception e) {
@@ -53,18 +56,18 @@ public class UserService {
     }
 
     /**
-     * Authentifie un utilisateur
+     * Authentifie un utilisateur en vérifiant le hash du mot de passe
      */
     public Optional<User> authenticate(String username, String password) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            TypedQuery<User> query = em.createQuery(
-                    "SELECT u FROM User u WHERE u.username = :" + PARAM_USERNAME + " AND u.password = :password",
-                    User.class);
-            query.setParameter(PARAM_USERNAME, username);
-            query.setParameter("password", password);
-            return Optional.of(query.getSingleResult());
-        } catch (NoResultException e) {
+            Optional<User> userOpt = userRepository.findByUsername(em, username);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                if (PasswordUtil.checkPassword(password, user.getPassword())) {
+                    return Optional.of(user);
+                }
+            }
             return Optional.empty();
         } finally {
             em.close();
@@ -77,8 +80,7 @@ public class UserService {
     public Optional<User> findById(Long id) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            User user = em.find(User.class, id);
-            return Optional.ofNullable(user);
+            return userRepository.findById(em, id);
         } finally {
             em.close();
         }
@@ -90,12 +92,7 @@ public class UserService {
     public Optional<User> findByUsername(String username) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            TypedQuery<User> query = em.createQuery(
-                    "SELECT u FROM User u WHERE u.username = :" + PARAM_USERNAME, User.class);
-            query.setParameter(PARAM_USERNAME, username);
-            return Optional.of(query.getSingleResult());
-        } catch (NoResultException e) {
-            return Optional.empty();
+            return userRepository.findByUsername(em, username);
         } finally {
             em.close();
         }
@@ -107,8 +104,7 @@ public class UserService {
     public List<User> findAll() {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            return em.createQuery("SELECT u FROM User u ORDER BY u.createdAt DESC", User.class)
-                    .getResultList();
+            return userRepository.findAll(em);
         } finally {
             em.close();
         }
@@ -121,7 +117,8 @@ public class UserService {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
-            User updated = em.merge(user);
+            ValidationUtil.validateAndThrow(user);
+            User updated = userRepository.update(em, user);
             em.getTransaction().commit();
             return updated;
         } catch (Exception e) {
@@ -141,10 +138,7 @@ public class UserService {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
-            User user = em.find(User.class, id);
-            if (user != null) {
-                em.remove(user);
-            }
+            userRepository.delete(em, id);
             em.getTransaction().commit();
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
@@ -154,20 +148,5 @@ public class UserService {
         } finally {
             em.close();
         }
-    }
-
-    // Méthodes utilitaires privées
-    private boolean existsByUsername(EntityManager em, String username) {
-        TypedQuery<Long> query = em.createQuery(
-                "SELECT COUNT(u) FROM User u WHERE u.username = :" + PARAM_USERNAME, Long.class);
-        query.setParameter(PARAM_USERNAME, username);
-        return query.getSingleResult() > 0;
-    }
-
-    private boolean existsByEmail(EntityManager em, String email) {
-        TypedQuery<Long> query = em.createQuery(
-                "SELECT COUNT(u) FROM User u WHERE u.email = :email", Long.class);
-        query.setParameter("email", email);
-        return query.getSingleResult() > 0;
     }
 }

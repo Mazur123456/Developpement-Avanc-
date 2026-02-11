@@ -2,10 +2,12 @@
     <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
         <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
             <!DOCTYPE html>
-            <html>
+            <html lang="fr">
 
             <head>
-                <title>${annonce.title} - MasterAnnonce</title>
+                <title>
+                    <c:out value="${annonce.title}" /> - MasterAnnonce
+                </title>
                 <style>
                     * {
                         box-sizing: border-box;
@@ -124,6 +126,11 @@
                         color: #000;
                     }
 
+                    .btn-danger {
+                        background: #dc3545;
+                        color: white;
+                    }
+
                     .btn-secondary {
                         background: #6c757d;
                         color: white;
@@ -137,6 +144,14 @@
                         color: #007bff;
                         text-decoration: none;
                     }
+
+                    .error {
+                        background: #f8d7da;
+                        color: #721c24;
+                        padding: 0.75rem;
+                        border-radius: 4px;
+                        margin-bottom: 1rem;
+                    }
                 </style>
             </head>
 
@@ -147,7 +162,9 @@
                         <a href="${pageContext.request.contextPath}/annonces">Annonces</a>
                         <c:if test="${not empty sessionScope.user}">
                             <a href="${pageContext.request.contextPath}/annonce/create">+ Créer</a>
-                            <span>| ${sessionScope.username}</span>
+                            <span>|
+                                <c:out value="${sessionScope.username}" />
+                            </span>
                             <a href="${pageContext.request.contextPath}/logout">Déconnexion</a>
                         </c:if>
                     </div>
@@ -158,52 +175,81 @@
                         <a href="${pageContext.request.contextPath}/annonces">← Retour aux annonces</a>
                     </div>
 
+                    <c:if test="${not empty error}">
+                        <div class="error">
+                            <c:out value="${error}" />
+                        </div>
+                    </c:if>
+
                     <div class="card">
-                        <h1>${annonce.title}</h1>
+                        <h1>
+                            <c:out value="${annonce.title}" />
+                        </h1>
 
                         <div class="meta">
-                            <span class="status status-${annonce.status}">${annonce.status}</span>
+                            <span class="status status-${annonce.status}">
+                                <c:out value="${annonce.status}" />
+                            </span>
                             <c:if test="${not empty annonce.category}">
-                                Catégorie: <strong>${annonce.category.label}</strong>
+                                Catégorie: <strong>
+                                    <c:out value="${annonce.category.label}" />
+                                </strong>
                             </c:if>
                             | Publié le
                             <fmt:formatDate value="${annonce.date}" pattern="dd/MM/yyyy à HH:mm" />
                             <c:if test="${not empty annonce.author}">
-                                | Par <strong>${annonce.author.username}</strong>
+                                | Par <strong>
+                                    <c:out value="${annonce.author.username}" />
+                                </strong>
                             </c:if>
                         </div>
 
                         <div class="description">
-                            <p>${annonce.description}</p>
+                            <p>
+                                <c:out value="${annonce.description}" />
+                            </p>
                         </div>
 
                         <div class="info">
-                            <p><strong>Adresse:</strong> ${annonce.adress}</p>
-                            <p><strong>Contact:</strong> ${annonce.mail}</p>
+                            <p><strong>Adresse:</strong>
+                                <c:out value="${annonce.adress}" />
+                            </p>
+                            <p><strong>Contact:</strong>
+                                <c:out value="${annonce.mail}" />
+                            </p>
                         </div>
 
-                        <c:if test="${not empty sessionScope.user}">
-                            <div class="actions">
-                                <a href="${pageContext.request.contextPath}/annonce/edit?id=${annonce.id}"
-                                    class="btn btn-primary">Modifier</a>
+                        <%-- Actions visibles UNIQUEMENT par l'auteur de l'annonce --%>
+                            <c:if
+                                test="${not empty sessionScope.userId and not empty annonce.author and sessionScope.userId == annonce.author.id}">
+                                <div class="actions">
+                                    <a href="${pageContext.request.contextPath}/annonce/edit?id=${annonce.id}"
+                                        class="btn btn-primary">Modifier</a>
 
-                                <c:if test="${annonce.status == 'DRAFT'}">
-                                    <form action="${pageContext.request.contextPath}/annonce/publish" method="post"
-                                        style="display:inline;">
-                                        <input type="hidden" name="id" value="${annonce.id}">
-                                        <button type="submit" class="btn btn-success">Publier</button>
-                                    </form>
-                                </c:if>
+                                    <c:if test="${annonce.status == 'DRAFT'}">
+                                        <form action="${pageContext.request.contextPath}/annonce/publish" method="post"
+                                            style="display:inline;">
+                                            <input type="hidden" name="id" value="${annonce.id}">
+                                            <button type="submit" class="btn btn-success">Publier</button>
+                                        </form>
+                                    </c:if>
 
-                                <c:if test="${annonce.status == 'PUBLISHED'}">
-                                    <form action="${pageContext.request.contextPath}/annonce/archive" method="post"
-                                        style="display:inline;">
+                                    <c:if test="${annonce.status == 'PUBLISHED'}">
+                                        <form action="${pageContext.request.contextPath}/annonce/archive" method="post"
+                                            style="display:inline;">
+                                            <input type="hidden" name="id" value="${annonce.id}">
+                                            <button type="submit" class="btn btn-warning">Archiver</button>
+                                        </form>
+                                    </c:if>
+
+                                    <form action="${pageContext.request.contextPath}/annonce/delete" method="post"
+                                        style="display:inline;"
+                                        onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?');">
                                         <input type="hidden" name="id" value="${annonce.id}">
-                                        <button type="submit" class="btn btn-warning">Archiver</button>
+                                        <button type="submit" class="btn btn-danger">Supprimer</button>
                                     </form>
-                                </c:if>
-                            </div>
-                        </c:if>
+                                </div>
+                            </c:if>
                     </div>
                 </div>
             </body>

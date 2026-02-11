@@ -1,7 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
     <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
         <!DOCTYPE html>
-        <html>
+        <html lang="fr">
 
         <head>
             <title>Connexion - MasterAnnonce</title>
@@ -99,13 +99,16 @@
                 <h1>Connexion</h1>
 
                 <c:if test="${not empty error}">
-                    <div class="error">${error}</div>
+                    <div class="error">
+                        <c:out value="${error}" />
+                    </div>
                 </c:if>
 
                 <form method="post" action="${pageContext.request.contextPath}/login">
                     <div class="form-group">
                         <label for="username">Nom d'utilisateur</label>
-                        <input type="text" id="username" name="username" value="${username}" required>
+                        <input type="text" id="username" name="username" value="<c:out value=" ${username}" />"
+                        required>
                     </div>
                     <div class="form-group">
                         <label for="password">Mot de passe</label>

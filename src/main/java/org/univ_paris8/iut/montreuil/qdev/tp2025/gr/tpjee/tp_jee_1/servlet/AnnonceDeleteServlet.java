@@ -11,10 +11,10 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
 /**
- * Servlet pour archiver une annonce (PUBLISHED → ARCHIVED)
+ * Servlet pour supprimer une annonce (avec vérification de propriété)
  */
-@WebServlet("/annonce/archive")
-public class AnnonceArchiveServlet extends HttpServlet {
+@WebServlet("/annonce/delete")
+public class AnnonceDeleteServlet extends HttpServlet {
 
     private final AnnonceService annonceService = new AnnonceService();
 
@@ -33,12 +33,10 @@ public class AnnonceArchiveServlet extends HttpServlet {
 
         try {
             Long id = Long.parseLong(idParam);
-            annonceService.archive(id, userId);
-            response.sendRedirect(request.getContextPath() + "/annonce/detail?id=" + id);
+            annonceService.delete(id, userId);
+            response.sendRedirect(request.getContextPath() + "/annonces");
         } catch (SecurityException e) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
-        } catch (IllegalStateException e) {
-            response.sendRedirect(request.getContextPath() + "/annonce/detail?id=" + idParam);
         } catch (Exception e) {
             response.sendRedirect(request.getContextPath() + "/annonces");
         }

@@ -7,6 +7,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
 /**
@@ -21,6 +22,9 @@ public class AnnoncePublishServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        HttpSession session = request.getSession(false);
+        Long userId = (Long) session.getAttribute("userId");
+
         String idParam = request.getParameter("id");
         if (idParam == null) {
             response.sendRedirect(request.getContextPath() + "/annonces");
@@ -29,10 +33,11 @@ public class AnnoncePublishServlet extends HttpServlet {
 
         try {
             Long id = Long.parseLong(idParam);
-            annonceService.publish(id);
+            annonceService.publish(id, userId);
             response.sendRedirect(request.getContextPath() + "/annonce/detail?id=" + id);
+        } catch (SecurityException e) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
         } catch (IllegalStateException e) {
-            request.setAttribute("error", e.getMessage());
             response.sendRedirect(request.getContextPath() + "/annonce/detail?id=" + idParam);
         } catch (Exception e) {
             response.sendRedirect(request.getContextPath() + "/annonces");

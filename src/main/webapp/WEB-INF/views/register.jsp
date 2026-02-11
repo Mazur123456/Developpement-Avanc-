@@ -105,29 +105,38 @@
                 <h1>Inscription</h1>
 
                 <c:if test="${not empty error}">
-                    <div class="error">${error}</div>
+                    <div class="error">
+                        <c:out value="${error}" />
+                    </div>
                 </c:if>
 
                 <form method="post" action="${pageContext.request.contextPath}/register">
                     <div class="form-group">
                         <label for="username">Nom d'utilisateur</label>
-                        <input type="text" id="username" name="username" value="${username}" required minlength="3">
+                        <input type="text" id="username" name="username" value="<c:out value=" ${username}" />" required
+                        minlength="3">
                         <c:if test="${not empty errors['username']}">
-                            <div class="field-error">${errors['username']}</div>
+                            <div class="field-error">
+                                <c:out value="${errors['username']}" />
+                            </div>
                         </c:if>
                     </div>
                     <div class="form-group">
                         <label for="email">Email</label>
-                        <input type="email" id="email" name="email" value="${email}" required>
+                        <input type="email" id="email" name="email" value="<c:out value=" ${email}" />" required>
                         <c:if test="${not empty errors['email']}">
-                            <div class="field-error">${errors['email']}</div>
+                            <div class="field-error">
+                                <c:out value="${errors['email']}" />
+                            </div>
                         </c:if>
                     </div>
                     <div class="form-group">
                         <label for="password">Mot de passe</label>
                         <input type="password" id="password" name="password" required minlength="6">
                         <c:if test="${not empty errors['password']}">
-                            <div class="field-error">${errors['password']}</div>
+                            <div class="field-error">
+                                <c:out value="${errors['password']}" />
+                            </div>
                         </c:if>
                     </div>
                     <div class="form-group">

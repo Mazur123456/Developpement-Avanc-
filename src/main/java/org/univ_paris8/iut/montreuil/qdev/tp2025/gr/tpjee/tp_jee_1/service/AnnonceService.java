@@ -4,22 +4,23 @@ import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.Annonc
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.AnnonceStatus;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.Category;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.User;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.repository.AnnonceRepository;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.JPAUtil;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.ValidationUtil;
 
 import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Service métier pour la gestion des annonces
- * Les transactions sont gérées ici, pas dans les Servlets
+ * Service métier pour la gestion des annonces.
+ * Les transactions sont gérées ici, pas dans les Repositories ni les Servlets.
+ * Délègue les opérations d'accès aux données au AnnonceRepository.
  */
 public class AnnonceService {
 
     private static final int DEFAULT_PAGE_SIZE = 10;
-    private static final String PARAM_STATUS = "status";
+    private final AnnonceRepository annonceRepository = new AnnonceRepository();
 
     /**
      * Crée une nouvelle annonce (statut DRAFT par défaut)
@@ -49,7 +50,7 @@ public class AnnonceService {
             }
 
             ValidationUtil.validateAndThrow(annonce);
-            em.persist(annonce);
+            annonceRepository.create(em, annonce);
             em.getTransaction().commit();
             return annonce;
         } catch (Exception e) {
@@ -63,10 +64,10 @@ public class AnnonceService {
     }
 
     /**
-     * Met à jour une annonce
+     * Met à jour une annonce existante (vérification de propriété)
      */
     public Annonce update(Long id, String title, String description, String adress,
-            String mail, Long categoryId) throws ValidationUtil.ValidationException {
+            String mail, Long categoryId, Long userId) throws ValidationUtil.ValidationException {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
@@ -75,6 +76,8 @@ public class AnnonceService {
             if (annonce == null) {
                 throw new IllegalArgumentException("Annonce non trouvée");
             }
+
+            checkOwnership(annonce, userId);
 
             annonce.setTitle(title);
             annonce.setDescription(description);
@@ -86,6 +89,9 @@ public class AnnonceService {
                 annonce.setCategory(category);
             }
 
+            // Validation avant commit
+            ValidationUtil.validateAndThrow(annonce);
+
             em.getTransaction().commit();
             return annonce;
         } catch (Exception e) {
@@ -99,9 +105,9 @@ public class AnnonceService {
     }
 
     /**
-     * Publie une annonce (DRAFT → PUBLISHED)
+     * Publie une annonce (DRAFT → PUBLISHED) — vérification de propriété
      */
-    public Annonce publish(Long id) {
+    public Annonce publish(Long id, Long userId) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
@@ -110,6 +116,8 @@ public class AnnonceService {
             if (annonce == null) {
                 throw new IllegalArgumentException("Annonce non trouvée");
             }
+
+            checkOwnership(annonce, userId);
 
             if (annonce.getStatus() != AnnonceStatus.DRAFT) {
                 throw new IllegalStateException("Seules les annonces en brouillon peuvent être publiées");
@@ -129,9 +137,9 @@ public class AnnonceService {
     }
 
     /**
-     * Archive une annonce (PUBLISHED → ARCHIVED)
+     * Archive une annonce (PUBLISHED → ARCHIVED) — vérification de propriété
      */
-    public Annonce archive(Long id) {
+    public Annonce archive(Long id, Long userId) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
@@ -140,6 +148,8 @@ public class AnnonceService {
             if (annonce == null) {
                 throw new IllegalArgumentException("Annonce non trouvée");
             }
+
+            checkOwnership(annonce, userId);
 
             if (annonce.getStatus() != AnnonceStatus.PUBLISHED) {
                 throw new IllegalStateException("Seules les annonces publiées peuvent être archivées");
@@ -159,18 +169,21 @@ public class AnnonceService {
     }
 
     /**
-     * Supprime une annonce
+     * Supprime une annonce — vérification de propriété
      */
-    public void delete(Long id) {
+    public void delete(Long id, Long userId) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
 
             Annonce annonce = em.find(Annonce.class, id);
-            if (annonce != null) {
-                em.remove(annonce);
+            if (annonce == null) {
+                throw new IllegalArgumentException("Annonce non trouvée");
             }
 
+            checkOwnership(annonce, userId);
+
+            annonceRepository.delete(em, id);
             em.getTransaction().commit();
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
@@ -188,8 +201,7 @@ public class AnnonceService {
     public Optional<Annonce> findById(Long id) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            Annonce annonce = em.find(Annonce.class, id);
-            return Optional.ofNullable(annonce);
+            return annonceRepository.findById(em, id);
         } finally {
             em.close();
         }
@@ -201,15 +213,7 @@ public class AnnonceService {
     public Optional<Annonce> findByIdWithDetails(Long id) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            TypedQuery<Annonce> query = em.createQuery(
-                    "SELECT a FROM Annonce a " +
-                            "LEFT JOIN FETCH a.author " +
-                            "LEFT JOIN FETCH a.category " +
-                            "WHERE a.id = :id",
-                    Annonce.class);
-            query.setParameter("id", id);
-            List<Annonce> results = query.getResultList();
-            return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+            return annonceRepository.findByIdWithDetails(em, id);
         } finally {
             em.close();
         }
@@ -225,15 +229,7 @@ public class AnnonceService {
     public List<Annonce> findPublished(int page, int pageSize) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            TypedQuery<Annonce> query = em.createQuery(
-                    "SELECT a FROM Annonce a " +
-                            "WHERE a.status = :" + PARAM_STATUS + " " +
-                            "ORDER BY a.date DESC",
-                    Annonce.class);
-            query.setParameter(PARAM_STATUS, AnnonceStatus.PUBLISHED);
-            query.setFirstResult((page - 1) * pageSize);
-            query.setMaxResults(pageSize);
-            return query.getResultList();
+            return annonceRepository.findPublishedPaginated(em, page, pageSize);
         } finally {
             em.close();
         }
@@ -249,11 +245,7 @@ public class AnnonceService {
     public List<Annonce> findAll(int page, int pageSize) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            TypedQuery<Annonce> query = em.createQuery(
-                    "SELECT a FROM Annonce a ORDER BY a.date DESC", Annonce.class);
-            query.setFirstResult((page - 1) * pageSize);
-            query.setMaxResults(pageSize);
-            return query.getResultList();
+            return annonceRepository.findAllPaginated(em, page, pageSize);
         } finally {
             em.close();
         }
@@ -269,16 +261,7 @@ public class AnnonceService {
     public List<Annonce> search(String keyword, int page, int pageSize) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            TypedQuery<Annonce> query = em.createQuery(
-                    "SELECT a FROM Annonce a " +
-                            "WHERE LOWER(a.title) LIKE LOWER(:keyword) " +
-                            "OR LOWER(a.description) LIKE LOWER(:keyword) " +
-                            "ORDER BY a.date DESC",
-                    Annonce.class);
-            query.setParameter("keyword", "%" + keyword + "%");
-            query.setFirstResult((page - 1) * pageSize);
-            query.setMaxResults(pageSize);
-            return query.getResultList();
+            return annonceRepository.searchByKeywordPaginated(em, keyword, page, pageSize);
         } finally {
             em.close();
         }
@@ -295,17 +278,7 @@ public class AnnonceService {
             int page, int pageSize) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            TypedQuery<Annonce> query = em.createQuery(
-                    "SELECT a FROM Annonce a " +
-                            "WHERE a.category.id = :categoryId " +
-                            "AND a.status = :" + PARAM_STATUS + " " +
-                            "ORDER BY a.date DESC",
-                    Annonce.class);
-            query.setParameter("categoryId", categoryId);
-            query.setParameter(PARAM_STATUS, status);
-            query.setFirstResult((page - 1) * pageSize);
-            query.setMaxResults(pageSize);
-            return query.getResultList();
+            return annonceRepository.findByCategoryAndStatus(em, categoryId, status, page, pageSize);
         } finally {
             em.close();
         }
@@ -317,13 +290,7 @@ public class AnnonceService {
     public List<Annonce> findByAuthor(Long authorId) {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            TypedQuery<Annonce> query = em.createQuery(
-                    "SELECT a FROM Annonce a " +
-                            "WHERE a.author.id = :authorId " +
-                            "ORDER BY a.date DESC",
-                    Annonce.class);
-            query.setParameter("authorId", authorId);
-            return query.getResultList();
+            return annonceRepository.findByAuthor(em, authorId);
         } finally {
             em.close();
         }
@@ -335,10 +302,7 @@ public class AnnonceService {
     public long countPublished() {
         EntityManager em = JPAUtil.getEntityManager();
         try {
-            TypedQuery<Long> query = em.createQuery(
-                    "SELECT COUNT(a) FROM Annonce a WHERE a.status = :" + PARAM_STATUS, Long.class);
-            query.setParameter(PARAM_STATUS, AnnonceStatus.PUBLISHED);
-            return query.getSingleResult();
+            return annonceRepository.countPublished(em);
         } finally {
             em.close();
         }
@@ -354,5 +318,14 @@ public class AnnonceService {
     public int getTotalPages(int pageSize) {
         long total = countPublished();
         return (int) Math.ceil((double) total / pageSize);
+    }
+
+    /**
+     * Vérifie que l'utilisateur connecté est bien l'auteur de l'annonce
+     */
+    private void checkOwnership(Annonce annonce, Long userId) {
+        if (annonce.getAuthor() == null || !annonce.getAuthor().getId().equals(userId)) {
+            throw new SecurityException("Vous n'êtes pas l'auteur de cette annonce");
+        }
     }
 }
