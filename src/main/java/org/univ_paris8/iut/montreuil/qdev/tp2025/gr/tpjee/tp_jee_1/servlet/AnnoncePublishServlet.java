@@ -1,5 +1,6 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.servlet;
 
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.exception.InvalidStateException;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service.AnnonceService;
 
 import javax.servlet.ServletException;
@@ -37,7 +38,7 @@ public class AnnoncePublishServlet extends HttpServlet {
             response.sendRedirect(request.getContextPath() + "/annonce/detail?id=" + id);
         } catch (SecurityException e) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
-        } catch (IllegalStateException e) {
+        } catch (InvalidStateException e) {
             response.sendRedirect(request.getContextPath() + "/annonce/detail?id=" + idParam);
         } catch (Exception e) {
             response.sendRedirect(request.getContextPath() + "/annonces");

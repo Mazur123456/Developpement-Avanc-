@@ -1,6 +1,7 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.servlet;
 
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.User;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.exception.DuplicateEntityException;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service.UserService;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.ValidationUtil;
 
@@ -65,7 +66,7 @@ public class RegisterServlet extends HttpServlet {
             request.setAttribute("errors", e.getErrors());
             request.setAttribute(ATTR_ERROR, "Erreur de validation");
             forwardWithValues(request, response, username, email);
-        } catch (IllegalArgumentException e) {
+        } catch (DuplicateEntityException e) {
             request.setAttribute(ATTR_ERROR, e.getMessage());
             forwardWithValues(request, response, username, email);
         }

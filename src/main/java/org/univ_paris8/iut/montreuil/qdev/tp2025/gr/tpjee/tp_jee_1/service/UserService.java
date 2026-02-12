@@ -1,6 +1,7 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service;
 
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.User;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.exception.DuplicateEntityException;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.repository.UserRepository;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.JPAUtil;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.PasswordUtil;
@@ -22,19 +23,20 @@ public class UserService {
     /**
      * Inscrit un nouvel utilisateur (mot de passe haché)
      */
-    public User register(String username, String email, String password) throws ValidationUtil.ValidationException {
+    public User register(String username, String email, String password)
+            throws ValidationUtil.ValidationException, DuplicateEntityException {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
 
             // Vérifier si le username existe déjà
             if (userRepository.existsByUsername(em, username)) {
-                throw new IllegalArgumentException("Ce nom d'utilisateur existe déjà");
+                throw new DuplicateEntityException("username", username);
             }
 
             // Vérifier si l'email existe déjà
             if (userRepository.existsByEmail(em, email)) {
-                throw new IllegalArgumentException("Cet email est déjà utilisé");
+                throw new DuplicateEntityException("email", email);
             }
 
             // Hacher le mot de passe avant stockage

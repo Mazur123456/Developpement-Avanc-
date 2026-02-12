@@ -4,6 +4,8 @@ import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.Annonc
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.AnnonceStatus;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.Category;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.User;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.exception.EntityNotFoundException;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.exception.InvalidStateException;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.repository.AnnonceRepository;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.JPAUtil;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.ValidationUtil;
@@ -26,7 +28,7 @@ public class AnnonceService {
      * Crée une nouvelle annonce (statut DRAFT par défaut)
      */
     public Annonce create(String title, String description, String adress, String mail,
-            Long authorId, Long categoryId) throws ValidationUtil.ValidationException {
+            Long authorId, Long categoryId) throws ValidationUtil.ValidationException, EntityNotFoundException {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
@@ -67,14 +69,15 @@ public class AnnonceService {
      * Met à jour une annonce existante (vérification de propriété)
      */
     public Annonce update(Long id, String title, String description, String adress,
-            String mail, Long categoryId, Long userId) throws ValidationUtil.ValidationException {
+            String mail, Long categoryId, Long userId)
+            throws ValidationUtil.ValidationException, EntityNotFoundException {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
 
             Annonce annonce = em.find(Annonce.class, id);
             if (annonce == null) {
-                throw new IllegalArgumentException("Annonce non trouvée");
+                throw new EntityNotFoundException("Annonce", id);
             }
 
             checkOwnership(annonce, userId);
@@ -107,20 +110,20 @@ public class AnnonceService {
     /**
      * Publie une annonce (DRAFT → PUBLISHED) — vérification de propriété
      */
-    public Annonce publish(Long id, Long userId) {
+    public Annonce publish(Long id, Long userId) throws EntityNotFoundException, InvalidStateException {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
 
             Annonce annonce = em.find(Annonce.class, id);
             if (annonce == null) {
-                throw new IllegalArgumentException("Annonce non trouvée");
+                throw new EntityNotFoundException("Annonce", id);
             }
 
             checkOwnership(annonce, userId);
 
             if (annonce.getStatus() != AnnonceStatus.DRAFT) {
-                throw new IllegalStateException("Seules les annonces en brouillon peuvent être publiées");
+                throw new InvalidStateException(annonce.getStatus().name(), AnnonceStatus.DRAFT.name());
             }
 
             annonce.publish();
@@ -139,20 +142,20 @@ public class AnnonceService {
     /**
      * Archive une annonce (PUBLISHED → ARCHIVED) — vérification de propriété
      */
-    public Annonce archive(Long id, Long userId) {
+    public Annonce archive(Long id, Long userId) throws EntityNotFoundException, InvalidStateException {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
 
             Annonce annonce = em.find(Annonce.class, id);
             if (annonce == null) {
-                throw new IllegalArgumentException("Annonce non trouvée");
+                throw new EntityNotFoundException("Annonce", id);
             }
 
             checkOwnership(annonce, userId);
 
             if (annonce.getStatus() != AnnonceStatus.PUBLISHED) {
-                throw new IllegalStateException("Seules les annonces publiées peuvent être archivées");
+                throw new InvalidStateException(annonce.getStatus().name(), AnnonceStatus.PUBLISHED.name());
             }
 
             annonce.archive();
@@ -171,19 +174,19 @@ public class AnnonceService {
     /**
      * Supprime une annonce — vérification de propriété
      */
-    public void delete(Long id, Long userId) {
+    public void delete(Long id, Long userId) throws EntityNotFoundException {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
 
             Annonce annonce = em.find(Annonce.class, id);
             if (annonce == null) {
-                throw new IllegalArgumentException("Annonce non trouvée");
+                throw new EntityNotFoundException("Annonce", id);
             }
 
             checkOwnership(annonce, userId);
 
-            annonceRepository.delete(em, id);
+            em.remove(annonce);
             em.getTransaction().commit();
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {

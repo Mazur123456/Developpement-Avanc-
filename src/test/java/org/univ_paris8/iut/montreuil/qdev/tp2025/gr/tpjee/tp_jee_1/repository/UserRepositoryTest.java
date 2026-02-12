@@ -62,7 +62,7 @@ class UserRepositoryTest {
     @DisplayName("Trouver par username")
     void testFindByUsername() {
         em.getTransaction().begin();
-        User user = new User("findme", "find@test.com", "hash");
+        User user = new User("findme", "find@test.com", "hashed1");
         userRepository.create(em, user);
         em.getTransaction().commit();
 
@@ -82,7 +82,7 @@ class UserRepositoryTest {
     @DisplayName("existsByUsername détecte les doublons")
     void testExistsByUsername() {
         em.getTransaction().begin();
-        User user = new User("duplicate", "dup@test.com", "hash");
+        User user = new User("duplicate", "dup@test.com", "hashed1");
         userRepository.create(em, user);
         em.getTransaction().commit();
 
@@ -94,7 +94,7 @@ class UserRepositoryTest {
     @DisplayName("existsByEmail détecte les doublons")
     void testExistsByEmail() {
         em.getTransaction().begin();
-        User user = new User("emailtest", "exists@test.com", "hash");
+        User user = new User("emailtest", "exists@test.com", "hashed1");
         userRepository.create(em, user);
         em.getTransaction().commit();
 
@@ -106,8 +106,8 @@ class UserRepositoryTest {
     @DisplayName("Lister tous les utilisateurs")
     void testFindAll() {
         em.getTransaction().begin();
-        userRepository.create(em, new User("user1", "u1@test.com", "h1"));
-        userRepository.create(em, new User("user2", "u2@test.com", "h2"));
+        userRepository.create(em, new User("user1", "u1@test.com", "hash01"));
+        userRepository.create(em, new User("user2", "u2@test.com", "hash02"));
         em.getTransaction().commit();
 
         List<User> all = userRepository.findAll(em);
@@ -118,7 +118,7 @@ class UserRepositoryTest {
     @DisplayName("Supprimer un utilisateur")
     void testDelete() {
         em.getTransaction().begin();
-        User user = new User("toDelete", "del@test.com", "hash");
+        User user = new User("toDelete", "del@test.com", "hashed1");
         userRepository.create(em, user);
         em.getTransaction().commit();
 

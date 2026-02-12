@@ -1,6 +1,7 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service;
 
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.Category;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.exception.DuplicateEntityException;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.repository.CategoryRepository;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.JPAUtil;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.ValidationUtil;
@@ -21,14 +22,14 @@ public class CategoryService {
     /**
      * Crée une nouvelle catégorie
      */
-    public Category create(String label) throws ValidationUtil.ValidationException {
+    public Category create(String label) throws ValidationUtil.ValidationException, DuplicateEntityException {
         EntityManager em = JPAUtil.getEntityManager();
         try {
             em.getTransaction().begin();
 
             // Vérifier si le label existe déjà
             if (categoryRepository.existsByLabel(em, label)) {
-                throw new IllegalArgumentException("Cette catégorie existe déjà");
+                throw new DuplicateEntityException("label", label);
             }
 
             Category category = new Category(label);

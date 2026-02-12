@@ -1,6 +1,9 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service;
 
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.*;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.repository.AnnonceRepository;
 
@@ -39,9 +42,9 @@ class AnnonceServiceTest {
         annonceRepository = new AnnonceRepository();
 
         em.getTransaction().begin();
-        owner = new User("owner", "owner@test.com", "hash");
+        owner = new User("owner", "owner@test.com", "hash123");
         em.persist(owner);
-        otherUser = new User("other", "other@test.com", "hash");
+        otherUser = new User("other", "other@test.com", "hash123");
         em.persist(otherUser);
         em.getTransaction().commit();
     }

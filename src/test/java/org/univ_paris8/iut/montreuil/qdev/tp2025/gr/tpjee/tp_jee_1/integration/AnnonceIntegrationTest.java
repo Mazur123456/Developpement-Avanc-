@@ -55,7 +55,7 @@ class AnnonceIntegrationTest {
     void testFullWorkflow() {
         // 1. Créer un utilisateur et une catégorie
         em.getTransaction().begin();
-        User user = new User("workflow_user", "wf@test.com", "hash");
+        User user = new User("workflow_user", "wf@test.com", "hashed1");
         em.persist(user);
         Category category = new Category("Immobilier");
         em.persist(category);
@@ -108,7 +108,7 @@ class AnnonceIntegrationTest {
     void testJoinFetchPreventsNPlus1() {
         // Créer des données
         em.getTransaction().begin();
-        User user = new User("n1_user", "n1@test.com", "hash");
+        User user = new User("n1_user", "n1@test.com", "hashed1");
         em.persist(user);
         Category cat = new Category("N+1 Test");
         em.persist(cat);
@@ -142,7 +142,7 @@ class AnnonceIntegrationTest {
     void testLazyLoadingIssue() {
         // Créer des données
         em.getTransaction().begin();
-        User user = new User("lazy_user", "lazy@test.com", "hash");
+        User user = new User("lazy_user", "lazy@test.com", "hashed1");
         em.persist(user);
         Category cat = new Category("Lazy Test");
         em.persist(cat);

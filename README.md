@@ -1,160 +1,128 @@
 # MasterAnnonce - Application de Gestion de Petites Annonces
 
-Application Java EE développée selon l'architecture MVC (Servlet/JSP) avec JDBC pur.
+Application Java EE modernisée avec JPA/Hibernate, architecture en couches (Servlet/JSP/Service/Repository).
 
 ## 🎓 Contexte
 
-Projet universitaire développé selon les spécifications du cours, utilisant:
-- **Architecture**: MVC sans framework lourd (pas de Spring/Hibernate)
-- **Base de données**: PostgreSQL avec JDBC pur
-- **Frontend**: JSP + JSTL + Bootstrap 5
-- **Serveur**: Apache Tomcat 9
+Projet universitaire TP2 – Modernisation d'une application Web Java EE avec JPA/Hibernate.
 
 ## 📦 Technologies
 
-- **Java 11**
-- **Maven** (gestion de dépendances)
-- **PostgreSQL** (base de données)
-- **Servlet API 4.0.1**
-- **JSTL 1.2**
-- **Bootstrap 5.3.0**
+- **Java 11** + **Maven**
+- **JPA 2.2** (javax.persistence) + **Hibernate ORM 5.6**
+- **PostgreSQL** (via driver JDBC 42.7)
+- **Servlet API 4.0.1** + **JSTL 1.2** + **JSP**
+- **Bean Validation** (Hibernate Validator 6.2)
+- **Bootstrap 5.3.0** (CDN)
 
 ## 🏗️ Architecture
 
+Architecture en couches conformément aux exigences du TP2 :
+
 ```
-fr.paris13.master/
-├── bean/          # Objets métier (Annonce)
-├── dao/           # Data Access Objects (DAO, AnnonceDAO)
-├── utils/         # Utilitaires (ConnectionDB Singleton)
-└── servlet/       # Contrôleurs (AnnonceList, AnnonceAdd, AnnonceUpdate, AnnonceDelete)
-```
-
-## 🗄️ Base de données
-
-### Configuration PostgreSQL
-
-1. Créer la base de données:
-```sql
-CREATE DATABASE MasterAnnonce;
+src/main/java/.../tp_jee_1/
+├── entity/         # Entités JPA (User, Category, Annonce, AnnonceStatus)
+├── repository/     # Couche d'accès aux données (JPQL, pas de transactions)
+├── service/        # Couche métier (gestion des transactions)
+├── servlet/        # Contrôleurs HTTP (Login, Register, CRUD Annonce)
+├── filter/         # Filtre d'authentification (AuthFilter)
+├── listener/       # Lifecycle JPA (JPAContextListener)
+├── exception/      # Exceptions métier personnalisées
+└── utils/          # JPAUtil (EntityManager), ValidationUtil (Bean Validation)
 ```
 
-2. Se connecter et exécuter le script `src/main/resources/init.sql`:
-```sql
-\c MasterAnnonce
-CREATE TABLE annonce (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(64),
-    description VARCHAR(256),
-    adress VARCHAR(64),
-    mail VARCHAR(64),
-    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+### Séparation des responsabilités
 
-### Paramètres de connexion
+| Couche | Rôle | Transactions |
+|--------|------|-------------|
+| **Servlet** | Traitement HTTP, validation basique, routing JSP | ❌ Aucune |
+| **Service** | Logique métier, orchestration | ✅ Gérées ici |
+| **Repository** | Accès données JPQL, reçoit l'EntityManager | ❌ Aucune |
 
-Par défaut dans `ConnectionDB.java`:
-- **URL**: `jdbc:postgresql://localhost:5432/MasterAnnonce`
-- **User**: `postgres`
-- **Password**: `password13`
+## 🗄️ Modèle de données
 
-> ⚠️ **Important**: Modifiez ces paramètres si nécessaire dans `src/main/java/fr/paris13/master/utils/ConnectionDB.java`
+### Entités JPA
+
+- **User** : `id`, `username` (unique), `email` (unique), `password`, `createdAt`
+- **Category** : `id`, `label` (unique)
+- **Annonce** : `id`, `title`, `description`, `adress`, `mail`, `date`, `status` (ENUM), `author` → User, `category` → Category
+
+### Relations
+
+- `User` 1─N `Annonce` (`@OneToMany` / `@ManyToOne`, LAZY)
+- `Category` 1─N `Annonce` (`@OneToMany` / `@ManyToOne`, LAZY)
 
 ## 🚀 Installation et Déploiement
 
-### 1. Compilation
+### Prérequis
+
+- Java 11+, Maven 3+, PostgreSQL, Tomcat 9
+
+### 1. Base de données
+
+```sql
+CREATE DATABASE master_annonce;
+```
+
+> Hibernate génère automatiquement le schéma (`hbm2ddl.auto=update`).
+
+### 2. Configuration
+
+Modifier `src/main/resources/META-INF/persistence.xml` si nécessaire (URL, user, password).
+
+### 3. Compilation
 
 ```bash
 mvn clean package
 ```
 
-### 2. Déploiement sur Tomcat
-
-Copier le fichier WAR généré dans le dossier `webapps/` de Tomcat:
-```bash
-cp target/MasterAnnonce-1.0-SNAPSHOT.war $TOMCAT_HOME/webapps/
-```
-
-### 3. Démarrer Tomcat
+### 4. Déploiement Docker
 
 ```bash
-$TOMCAT_HOME/bin/startup.sh  # Linux/Mac
-$TOMCAT_HOME/bin/startup.bat  # Windows
+docker-compose up --build
 ```
 
-### 4. Accéder à l'application
+### 5. Accéder à l'application
 
-Ouvrir dans le navigateur:
 ```
-http://localhost:8080/MasterAnnonce-1.0-SNAPSHOT/
+http://localhost:8080/login
 ```
 
 ## 📱 Fonctionnalités
 
-### 1. Liste des annonces (`/AnnonceList`)
-- Affichage de toutes les annonces en cartes
-- Boutons "Modifier" et "Supprimer" pour chaque annonce
-- Bouton "Ajouter une annonce"
+- **Authentification** : Login/Register avec session HTTP + filtre de sécurité (`AuthFilter`)
+- **Liste paginée** des annonces publiées (`/annonces`)
+- **Création** d'annonce avec sélection de catégorie (`/annonce/create`)
+- **Modification** d'annonce (`/annonce/edit?id=X`)
+- **Détail** d'annonce avec JOIN FETCH (`/annonce/detail?id=X`)
+- **Publication** (DRAFT → PUBLISHED) et **Archivage** (PUBLISHED → ARCHIVED)
+- **Validation** serveur (Bean Validation JSR-380) avec conservation des valeurs saisies
 
-### 2. Ajouter une annonce (`/AnnonceAdd`)
-- Formulaire avec validation
-- Champs: Titre, Description, Adresse, Email
+## 🐛 Problèmes rencontrés et solutions
 
-### 3. Modifier une annonce (`/AnnonceUpdate?id=X`)
-- Formulaire pré-rempli avec les données existantes
-- Mise à jour des informations
+### 1. LazyInitializationException sur les relations
 
-### 4. Supprimer une annonce (`/AnnonceDelete?id=X`)
-- Suppression avec confirmation JavaScript
-- Redirection vers la liste
+**Problème** : Accéder à `annonce.getAuthor()` ou `annonce.getCategory()` après la fermeture de l'EntityManager lançait une `LazyInitializationException`.
 
-## 🔧 Développement
+**Solution** : Utilisation de `JOIN FETCH` dans les requêtes JPQL (méthode `findByIdWithDetails()`) pour charger les relations dans la même requête.
 
-### Structure du projet
+### 2. Gestion du cycle de vie de l'EntityManagerFactory
 
-```
-project/
-├── pom.xml
-├── src/
-│   ├── main/
-│   │   ├── java/org/univ_paris8/iut/montreuil/qdev/tp2025/gr/tpjee/tp_jee_1/
-│   │   │   ├── bean/Annonce.java
-│   │   │   ├── dao/
-│   │   │   │   ├── DAO.java
-│   │   │   │   └── AnnonceDAO.java
-│   │   │   ├── servlet/
-│   │   │   │   ├── AnnonceList.java
-│   │   │   │   ├── AnnonceAdd.java
-│   │   │   │   ├── AnnonceUpdate.java
-│   │   │   │   └── AnnonceDelete.java
-│   │   │   └── utils/ConnectionDB.java
-│   │   ├── resources/init.sql
-│   │   └── webapp/
-│   │       ├── AnnonceList.jsp
-│   │       ├── AnnonceAdd.jsp
-│   │       ├── AnnonceUpdate.jsp
-│   │       └── index.jsp
-│   └── test/
-└── target/
-```
+**Problème** : L'EntityManagerFactory n'était pas fermé proprement à l'arrêt de l'application, causant des fuites de connexions.
 
-### Patterns utilisés
+**Solution** : Mise en place d'un `JPAContextListener` (`@WebListener`) qui appelle `JPAUtil.shutdown()` sur `contextDestroyed`.
 
-- **Singleton**: `ConnectionDB` pour la gestion unique de la connexion
-- **DAO (Data Access Object)**: Séparation de la logique d'accès aux données
-- **MVC**: Servlet (Contrôleur) + JSP (Vue) + Bean (Modèle)
+### 3. Transactions et architecture en couches
 
-## 🛡️ Sécurité
+**Problème** : Initialement, les transactions étaient gérées à la fois dans les Repositories et les Services, créant une confusion architecturale.
 
-- Utilisation de **PreparedStatement** pour éviter les injections SQL
-- Échappement JSTL avec `<c:out>` pour éviter les failles XSS
-- Validation HTML5 sur les formulaires
+**Solution** : Refactorisation pour que les Repositories reçoivent l'EntityManager en paramètre (sans gestion de transaction), et que les Services gèrent exclusivement les transactions (begin/commit/rollback).
 
-## 📝 Notes
+### 4. Configuration Docker vs Local
 
-- Le projet utilise JDBC pur (pas d'ORM comme Hibernate)
-- Les annotations `@WebServlet` sont utilisées pour le mapping des servlets
-- Bootstrap 5 est chargé via CDN
+**Problème** : Les paramètres de connexion diffèrent entre l'environnement local et Docker.
+
+**Solution** : `JPAUtil` lit les variables d'environnement Docker (`DB_HOST`, `DB_PORT`, etc.) et surcharge les valeurs de `persistence.xml` si elles sont présentes.
 
 ## 📄 Licence
 
