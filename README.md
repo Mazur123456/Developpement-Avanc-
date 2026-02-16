@@ -1,129 +1,135 @@
-# MasterAnnonce - Application de Gestion de Petites Annonces
+# MasterAnnonce - API Backend (TP3)
 
-Application Java EE modernisée avec JPA/Hibernate, architecture en couches (Servlet/JSP/Service/Repository).
+Application Java EE modernisée, évoluant d'une application Servlet/JSP (TP2) vers une **API REST JAX-RS sécurisée et stateless** (TP3), toujours basée sur JPA/Hibernate et une architecture en couches.
 
-## 🎓 Contexte
+## 🎓 Contexte Pédagogique (TP3)
 
-Projet universitaire TP2 – Modernisation d'une application Web Java EE avec JPA/Hibernate.
+Ce projet répond aux exigences du TP "Dev Avancé #3".
+**Objectif** : Transformer `MasterAnnonce` en un backend API professionnel.
 
-## 📦 Technologies
+- **Stack** : Java EE / Jakarta EE pur (Pas de Spring).
+- **Communication** : JSON uniquement.
+- **Sécurité** : Stateless (Token-based).
+- **Qualité** : Tests unitaires & intégration, Architecture en couches.
 
-- **Java 11** + **Maven**
-- **JPA 2.2** (javax.persistence) + **Hibernate ORM 5.6**
-- **PostgreSQL** (via driver JDBC 42.7)
-- **Servlet API 4.0.1** + **JSTL 1.2** + **JSP**
-- **Bean Validation** (Hibernate Validator 6.2)
-- **Bootstrap 5.3.0** (CDN)
+## 📦 Technologies Utilisées
 
-## 🏗️ Architecture
+- **Java 11** + **Maven 3+**
+- **JAX-RS (Jersey 2.x)** : Framework REST pour l'exposition des ressources.
+    - *Choix de configuration* : Utilisation de `ResourceConfig` (Jersey) plutôt que `Application` standard pour une configuration plus flexible des packages et des filtres.
+- **Jackson** : Sérialisation/Désérialisation JSON.
+- **JPA 2.2** (javax.persistence) + **Hibernate ORM 5.6** : Persistance.
+- **PostgreSQL** : Base de données relationnelle (Driver JDBC 42.7).
+- **Bean Validation** (Hibernate Validator 6.2) : Validation des DTOs.
+- **JUnit 5 + Mockito** : Tests unitaires et d'intégration.
+- **Bootstrap 5.3.0** : (Héritage TP2) Pour les pages webs résiduelles.
 
-Architecture en couches conformément aux exigences du TP2 :
+## 🏗️ Architecture Technique
+
+Architecture en couches stricte respectant le principe de séparation des responsabilités :
 
 ```
-src/main/java/.../tp_jee_1/
-├── entity/         # Entités JPA (User, Category, Annonce, AnnonceStatus)
-├── repository/     # Couche d'accès aux données (JPQL, pas de transactions)
-├── service/        # Couche métier (gestion des transactions)
-├── servlet/        # Contrôleurs HTTP (Login, Register, CRUD Annonce)
-├── filter/         # Filtre d'authentification (AuthFilter)
-├── listener/       # Lifecycle JPA (JPAContextListener)
-├── exception/      # Exceptions métier personnalisées
-└── utils/          # JPAUtil (EntityManager), ValidationUtil (Bean Validation)
+src/main/java/org/univ_paris8/iut/montreuil/qdev/tp2025/gr/tpjee/tp_jee_1/
+├── entity/         # Entités JPA (User, Category, Annonce) - Modèle de données
+├── dto/            # DTOs (Data Transfer Objects) - Contrats d'interface API
+├── repository/     # Variable d'accès aux données (JPQL pur, Stateless, sans transaction)
+├── service/        # Logique métier & Gestion des Transactions (ACID)
+├── resource/       # Contrôleurs JAX-RS (Endpoints HTTP, validation entrées, retour JSON)
+├── filter/         # Filtres JAX-RS (Sécurité AuthFilter, CORS, etc.)
+├── exception/      # Gestion centralisée des erreurs (GlobalExceptionMapper)
+└── utils/          # Utilitaires (JPAUtil pour l'EMF, PasswordUtil pour le hachage)
 ```
 
-### Séparation des responsabilités
+### Justification de l'Architecture
+*   **Resource vs Service** : Les contrôleurs JAX-RS (`Resource`) ne contiennent *aucune* logique métier. Ils ne font que déléguer au `Service` et gérer le protocole HTTP (Codes 200, 400, 404...).
+*   **Service vs Repository** : Les Services gèrent les transactions (`begin`/`commit`). Les Repositories sont passifs et reçoivent l'`EntityManager` injecté par le Service.
 
-| Couche | Rôle | Transactions |
-|--------|------|-------------|
-| **Servlet** | Traitement HTTP, validation basique, routing JSP | ❌ Aucune |
-| **Service** | Logique métier, orchestration | ✅ Gérées ici |
-| **Repository** | Accès données JPQL, reçoit l'EntityManager | ❌ Aucune |
+## 🔐 Authentification & Sécurité (Exercice 5 & 6)
 
-## 🗄️ Modèle de données
+L'application implémente une sécurité **Stateless** (sans session serveur `HttpSession`) basée sur des **Tokens**.
 
-### Entités JPA
+### Flow d'Authentification
+1.  **Login** (`POST /api/login`) :
+    *   Le client envoie `{"username": "...", "password": "..."}`.
+    *   Le serveur vérifie les identifiants hashés (SHA-256).
+    *   Si OK, le serveur génère un **Token Unique** (UUID) stocké temporairement en mémoire (`AuthService`).
+    *   Le serveur retourne `{"token": "..."}`.
+2.  **Accès Sécurisé** :
+    *   Pour accéder aux routes protégées (ex: `POST /api/annonces`), le client **doit** envoyer le header : `Authorization: Bearer <token>`.
+3.  **Filtrage** (`AuthFilter`) :
+    *   Intercepte chaque requête API.
+    *   Vérifie la présence et la validité du token.
+    *   Si valide : Reconstitue l'identité utilisateur (`SecurityContext`) pour la requête en cours.
+    *   Si invalide : Retourne immédiatement `401 Unauthorized`.
 
-- **User** : `id`, `username` (unique), `email` (unique), `password`, `createdAt`
-- **Category** : `id`, `label` (unique)
-- **Annonce** : `id`, `title`, `description`, `adress`, `mail`, `date`, `status` (ENUM), `author` → User, `category` → Category
-
-### Relations
-
-- `User` 1─N `Annonce` (`@OneToMany` / `@ManyToOne`, LAZY)
-- `Category` 1─N `Annonce` (`@OneToMany` / `@ManyToOne`, LAZY)
-
-## 🚀 Installation et Déploiement
+## 🚀 Installation et Démarrage
 
 ### Prérequis
+- Java 11+
+- Maven 3+
+- Docker & Docker Compose
 
-- Java 11+, Maven 3+, PostgreSQL, Tomcat 9
+### Lancement avec Docker ("Tout en un")
+Cette commande lance **PostgreSQL** (Base de données) et **Tomcat** (Serveur d'Application) configurés automatiquement.
 
-### 1. Base de données
+1. **Nettoyage (Optionnel)** :
+   ```bash
+   docker-compose down
+   ```
+2. **Compilation (Obligatoire)** : Le Dockerfile copiant le .war, il faut le générer avant.
+   ```bash
+   ./mvnw clean package
+   ```
+3. **Lancement** :
+   ```bash
+   docker-compose up --build
+   ```
 
-```sql
-CREATE DATABASE master_annonce;
-```
+> **🏠 Application Web** : `http://localhost:8080/MasterAnnonce/` (Ou `index.jsp`)
+> **🔌 Accès API** : `http://localhost:8080/MasterAnnonce/api/annonces`
+> **🔑 Login** : `POST http://localhost:8080/MasterAnnonce/api/login`
 
-> Hibernate génère automatiquement le schéma (`hbm2ddl.auto=update`).
+---
 
-### 2. Configuration
+## 📡 Endpoints API Principaux
 
-Modifier `src/main/resources/META-INF/persistence.xml` si nécessaire (URL, user, password).
+| Verbe | URI | Description | Auth |
+|-------|-----|-------------|------|
+| **POST** | `/MasterAnnonce/api/login` | Récupération du token | ❌ Non |
+| **GET** | `/MasterAnnonce/api/annonces` | Liste paginée des annonces | ❌ Non |
+| **GET** | `/MasterAnnonce/api/annonces/{id}` | Détail d'une annonce | ❌ Non |
+| **POST** | `/MasterAnnonce/api/annonces` | Créer une annonce | ✅ Token |
+| **PUT** | `/MasterAnnonce/api/annonces/{id}` | Modifier (Auteur uniquement) | ✅ Token |
+| **DELETE**| `/MasterAnnonce/api/annonces/{id}` | Supprimer (Auteur uniquement)| ✅ Token |
 
-### 3. Compilation
+## 🧪 Tests & Qualité (Exercice 10)
 
-```bash
-mvn clean package
-```
+L'application dispose de deux types de tests séparés :
 
-### 4. Déploiement Docker
+1.  **Tests Unitaires (Unit)** : Testent la logique métier isolée (Services) et les Utilitaires. Rapides, pas de BDD.
+2.  **Tests d'Intégration (IT)** : Testent la persistance (Repositories) et les scénarios complets avec une base de données H2 en mémoire.
 
-```bash
-docker-compose up --build
-```
+**Pourquoi séparer ?**
+*   Les tests unitaires sont exécutés à chaque build (feedback immédiat).
+*   Les tests d'intégration sont plus lents et peuvent être exécutés moins souvent (CI/CD).
 
-### 5. Accéder à l'application
+## 🐛 Problèmes Rencontrés & Solutions
 
-```
-http://localhost:8080/login
-```
+### 1. LazyInitializationException
+*   **Problème** : Accès aux collections/entités liées (`annonce.getAuthor()`) après la fermeture de la transaction/EntityManager lors de la sérialisation JSON.
+*   **Solution** : Utilisation systématique de requêtes **`JOIN FETCH`** dans les repositories pour charger les données nécessaires en une seule fois.
 
-## 📱 Fonctionnalités
+### 2. Conflit Servlet / JAX-RS
+*   **Problème** : Les anciens Servlets (TP2) captaient certaines URL ou entraient en conflit avec le mapping `/api/*`.
+*   **Solution** : Configuration précise dans `web.xml` pour isoler `JerseyServlet` sur `/api/*` et laisser les anciens Servlets sur `/`.
 
-- **Authentification** : Login/Register avec session HTTP + filtre de sécurité (`AuthFilter`)
-- **Liste paginée** des annonces publiées (`/annonces`)
-- **Création** d'annonce avec sélection de catégorie (`/annonce/create`)
-- **Modification** d'annonce (`/annonce/edit?id=X`)
-- **Détail** d'annonce avec JOIN FETCH (`/annonce/detail?id=X`)
-- **Publication** (DRAFT → PUBLISHED) et **Archivage** (PUBLISHED → ARCHIVED)
-- **Validation** serveur (Bean Validation JSR-380) avec conservation des valeurs saisies
-
-## 🐛 Problèmes rencontrés et solutions
-
-### 1. LazyInitializationException sur les relations
-
-**Problème** : Accéder à `annonce.getAuthor()` ou `annonce.getCategory()` après la fermeture de l'EntityManager lançait une `LazyInitializationException`.
-
-**Solution** : Utilisation de `JOIN FETCH` dans les requêtes JPQL (méthode `findByIdWithDetails()`) pour charger les relations dans la même requête.
-
-### 2. Gestion du cycle de vie de l'EntityManagerFactory
-
-**Problème** : L'EntityManagerFactory n'était pas fermé proprement à l'arrêt de l'application, causant des fuites de connexions.
-
-**Solution** : Mise en place d'un `JPAContextListener` (`@WebListener`) qui appelle `JPAUtil.shutdown()` sur `contextDestroyed`.
-
-### 3. Transactions et architecture en couches
-
-**Problème** : Initialement, les transactions étaient gérées à la fois dans les Repositories et les Services, créant une confusion architecturale.
-
-**Solution** : Refactorisation pour que les Repositories reçoivent l'EntityManager en paramètre (sans gestion de transaction), et que les Services gèrent exclusivement les transactions (begin/commit/rollback).
+### 3. Sécurité Stateless sans Session
+*   **Problème** : Comment sécuriser l'API sans utiliser le mécanisme `HttpSession` de Java EE ?
+*   **Solution** : Implémentation manuelle d'un système de Token (Map en mémoire) et surcharge du `SecurityContext` de JAX-RS pour injecter l'utilisateur courant dans les Ressources.
 
 ### 4. Configuration Docker vs Local
-
-**Problème** : Les paramètres de connexion diffèrent entre l'environnement local et Docker.
-
-**Solution** : `JPAUtil` lit les variables d'environnement Docker (`DB_HOST`, `DB_PORT`, etc.) et surcharge les valeurs de `persistence.xml` si elles sont présentes.
+*   **Problème** : Hardcoder les accès BDD dans `persistence.xml` casse le déploiement sur différents environnements.
+*   **Solution** : Utilisation d'une classe utilitaire `JPAUtil` qui lit les **variables d'environnement** (`DB_HOST`, `DB_PORT`) pour surcharger la configuration à la volée.
 
 ## 📄 Licence
-
-Projet universitaire - BUT 3 S6.R5
+Projet universitaire - BUT 3 S6.R5 - Développement Avancé

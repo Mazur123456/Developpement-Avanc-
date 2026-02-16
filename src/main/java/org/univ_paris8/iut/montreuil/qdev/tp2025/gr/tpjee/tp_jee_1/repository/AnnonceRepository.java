@@ -90,8 +90,10 @@ public class AnnonceRepository {
         public List<Annonce> searchByKeywordPaginated(EntityManager em, String keyword, int page, int pageSize) {
                 TypedQuery<Annonce> query = em.createQuery(
                                 "SELECT a FROM Annonce a " +
-                                                "WHERE LOWER(a.title) LIKE LOWER(:keyword) " +
-                                                "OR LOWER(a.description) LIKE LOWER(:keyword) " +
+                                                "LEFT JOIN FETCH a.author " +
+                                                "LEFT JOIN FETCH a.category " +
+                                                "WHERE (LOWER(a.title) LIKE LOWER(:keyword) " +
+                                                "OR LOWER(a.description) LIKE LOWER(:keyword)) " +
                                                 "ORDER BY a.date DESC",
                                 Annonce.class);
                 query.setParameter("keyword", "%" + keyword + "%");
@@ -133,6 +135,8 @@ public class AnnonceRepository {
                         int page, int pageSize) {
                 TypedQuery<Annonce> query = em.createQuery(
                                 "SELECT a FROM Annonce a " +
+                                                "LEFT JOIN FETCH a.author " +
+                                                "LEFT JOIN FETCH a.category " +
                                                 "WHERE a.category.id = :categoryId " +
                                                 "AND a.status = :status " +
                                                 "ORDER BY a.date DESC",
@@ -150,6 +154,8 @@ public class AnnonceRepository {
         public List<Annonce> findPublishedPaginated(EntityManager em, int page, int pageSize) {
                 TypedQuery<Annonce> query = em.createQuery(
                                 "SELECT a FROM Annonce a " +
+                                                "LEFT JOIN FETCH a.author " +
+                                                "LEFT JOIN FETCH a.category " +
                                                 "WHERE a.status = :status " +
                                                 "ORDER BY a.date DESC",
                                 Annonce.class);
