@@ -66,7 +66,7 @@ public final class ValidationUtil {
     /**
      * Exception personnalisée pour les erreurs de validation
      */
-    public static class ValidationException extends Exception {
+    public static class ValidationException extends RuntimeException {
         private final Map<String, String> errors;
 
         public ValidationException(Map<String, String> errors) {

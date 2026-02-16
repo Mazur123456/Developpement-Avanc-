@@ -21,7 +21,8 @@ public class AuthFilter implements Filter {
             "/register",
             "/logout",
             "/annonces",
-            "/annonce/detail");
+            "/annonce/detail",
+            "/api"); // JAX-RS endpoints gérés par Jersey (TP3)
 
     // Extensions de ressources statiques
     private static final List<String> STATIC_EXTENSIONS = Arrays.asList(

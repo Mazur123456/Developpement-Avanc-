@@ -3,7 +3,7 @@ package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.exception;
 /**
  * Exception métier de base pour l'application
  */
-public class BusinessException extends Exception {
+public class BusinessException extends RuntimeException {
 
     public BusinessException(String message) {
         super(message);
