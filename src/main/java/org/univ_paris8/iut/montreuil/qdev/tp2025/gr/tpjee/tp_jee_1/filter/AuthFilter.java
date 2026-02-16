@@ -1,98 +1,90 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.filter;
 
-import javax.servlet.*;
-import javax.servlet.annotation.WebFilter;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.User;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service.AuthService;
+
+import javax.annotation.Priority;
+import javax.ws.rs.Priorities;
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerRequestFilter;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.Provider;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Optional;
 
 /**
- * Filtre de sécurité pour protéger les ressources authentifiées
+ * Filtre JAX-RS pour sécuriser l'API via Token (Bearer).
+ * Remplace l'ancien filtre basé sur les Sessions Servlet.
  */
-@WebFilter("/*")
-public class AuthFilter implements Filter {
+@Provider
+@Priority(Priorities.AUTHENTICATION)
+public class AuthFilter implements ContainerRequestFilter {
 
-    // URLs publiques (pas besoin d'authentification)
-    private static final List<String> PUBLIC_URLS = Arrays.asList(
-            "/login",
-            "/register",
-            "/logout",
-            "/annonces",
-            "/annonce/detail",
-            "/api"); // JAX-RS endpoints gérés par Jersey (TP3)
+    private static final String AUTHENTICATION_SCHEME = "Bearer";
+    private final AuthService authService;
 
-    // Extensions de ressources statiques
-    private static final List<String> STATIC_EXTENSIONS = Arrays.asList(
-            ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2");
+    public AuthFilter() {
+        this.authService = new AuthService();
+    }
 
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-        // Initialisation si nécessaire
+    // Pour les tests
+    public AuthFilter(AuthService authService) {
+        this.authService = authService;
     }
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
+    public void filter(ContainerRequestContext requestContext) throws IOException {
 
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        HttpServletResponse httpResponse = (HttpServletResponse) response;
-
-        String requestURI = httpRequest.getRequestURI();
-        String contextPath = httpRequest.getContextPath();
-        String path = requestURI.substring(contextPath.length());
-
-        // Permettre l'accès aux ressources statiques
-        if (isStaticResource(path)) {
-            chain.doFilter(request, response);
+        // URLs publiques (ne nécessitant pas de token)
+        String path = requestContext.getUriInfo().getPath();
+        if (isPublicPath(path, requestContext.getMethod())) {
             return;
         }
 
-        // Permettre l'accès aux URLs publiques
-        if (isPublicUrl(path)) {
-            chain.doFilter(request, response);
+        // Récupérer le header Authorization
+        String authorizationHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
+
+        // Valider le header
+        if (!isTokenBasedAuthentication(authorizationHeader)) {
+            abortWithUnauthorized(requestContext);
             return;
         }
 
-        // Vérifier l'authentification pour les autres URLs
-        HttpSession session = httpRequest.getSession(false);
-        if (session == null || session.getAttribute("user") == null) {
-            // Sauvegarder l'URL demandée pour redirection après login
-            session = httpRequest.getSession(true);
-            session.setAttribute("redirectUrl", requestURI);
-            httpResponse.sendRedirect(contextPath + "/login");
-            return;
-        }
+        // Extraire le token
+        String token = authorizationHeader.substring(AUTHENTICATION_SCHEME.length()).trim();
 
-        // Utilisateur authentifié, continuer
-        chain.doFilter(request, response);
+        // Valider le token
+        Optional<User> userOpt = authService.validateToken(token);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            // Créer un SecurityContext custom pour injecter l'utilisateur
+            TokenSecurityContext securityContext = new TokenSecurityContext(user,
+                    requestContext.getUriInfo().getRequestUri().getScheme());
+            requestContext.setSecurityContext(securityContext);
+        } else {
+            abortWithUnauthorized(requestContext);
+        }
     }
 
-    @Override
-    public void destroy() {
-        // Nettoyage si nécessaire
+    private boolean isPublicPath(String path, String method) {
+        // Liste des endpoints publics
+        return path.equals("auth/login") ||
+                path.equals("login") ||
+                path.equals("helloWorld") ||
+                (path.startsWith("annonces") && "GET".equalsIgnoreCase(method));
     }
 
-    private boolean isPublicUrl(String path) {
-        if (path.equals("/") || path.isEmpty()) {
-            return true;
-        }
-        for (String publicUrl : PUBLIC_URLS) {
-            if (path.startsWith(publicUrl)) {
-                return true;
-            }
-        }
-        return false;
+    private boolean isTokenBasedAuthentication(String authorizationHeader) {
+        return authorizationHeader != null
+                && authorizationHeader.toLowerCase().startsWith(AUTHENTICATION_SCHEME.toLowerCase() + " ");
     }
 
-    private boolean isStaticResource(String path) {
-        for (String ext : STATIC_EXTENSIONS) {
-            if (path.endsWith(ext)) {
-                return true;
-            }
-        }
-        return false;
+    private void abortWithUnauthorized(ContainerRequestContext requestContext) {
+        requestContext.abortWith(
+                Response.status(Response.Status.UNAUTHORIZED)
+                        .header(HttpHeaders.WWW_AUTHENTICATE, AUTHENTICATION_SCHEME)
+                        .entity("{\"error\": \"Authentication required\"}")
+                        .build());
     }
 }
