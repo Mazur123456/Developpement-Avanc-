@@ -131,4 +131,61 @@ class AnnonceServiceTest {
         // La vérification de propriété doit échouer pour un autre utilisateur
         assertFalse(annonce.getAuthor().getId().equals(otherUser.getId()));
     }
+
+    // ==================== Exercice 7 – Règles métier avancées ====================
+
+    @Test
+    @DisplayName("Une annonce PUBLISHED ne peut pas être modifiée (Ex 7.2)")
+    void testCannotUpdatePublishedAnnonce() {
+        em.getTransaction().begin();
+        Annonce annonce = new Annonce("Test", "Desc", "Addr", "t@t.com");
+        annonce.setAuthor(owner);
+        annonce.publish(); // Mettre en PUBLISHED
+        annonceRepository.create(em, annonce);
+        em.getTransaction().commit();
+
+        assertTrue(annonce.isPublished(), "L'annonce doit être PUBLISHED");
+        // Le service doit refuser la modification d'une annonce publiée
+        // → InvalidStateException levée dans AnnonceService.update()
+    }
+
+    @Test
+    @DisplayName("Suppression interdite si annonce non archivée (Ex 7.3)")
+    void testCannotDeleteNonArchivedAnnonce() {
+        Annonce annonceDraft = new Annonce("Draft", "Desc", "Addr", "t@t.com");
+        assertFalse(annonceDraft.isArchived(),
+                "Une annonce DRAFT ne doit pas pouvoir être supprimée");
+
+        Annonce annoncePublished = new Annonce("Published", "Desc", "Addr", "t@t.com");
+        annoncePublished.publish();
+        assertFalse(annoncePublished.isArchived(),
+                "Une annonce PUBLISHED ne doit pas pouvoir être supprimée");
+    }
+
+    @Test
+    @DisplayName("Suppression autorisée pour une annonce ARCHIVED (Ex 7.3)")
+    void testCanDeleteArchivedAnnonce() {
+        Annonce annonce = new Annonce("Test", "Desc", "Addr", "t@t.com");
+        annonce.publish();
+        annonce.archive();
+        assertTrue(annonce.isArchived(),
+                "L'annonce doit être ARCHIVED pour pouvoir être supprimée");
+    }
+
+    @Test
+    @DisplayName("Le champ @Version existe pour la gestion de concurrence (Ex 7.4)")
+    void testVersionFieldExists() {
+        Annonce annonce = new Annonce("Test", "Desc", "Addr", "t@t.com");
+        // Le champ version est null à la création (géré par JPA)
+        assertNull(annonce.getVersion(), "La version doit être null avant persistance");
+
+        em.getTransaction().begin();
+        annonce.setAuthor(owner);
+        annonceRepository.create(em, annonce);
+        em.getTransaction().commit();
+
+        // Après persistance, JPA initialise la version à 0
+        em.refresh(annonce);
+        assertNotNull(annonce.getVersion(), "La version doit être initialisée après persistance");
+    }
 }

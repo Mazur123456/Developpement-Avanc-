@@ -12,11 +12,17 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
 /**
- * Servlet pour archiver une annonce (PUBLISHED → ARCHIVED)
+ * Servlet unifiée pour les changements de statut d'une annonce.
+ * Gère les actions "publish" (DRAFT → PUBLISHED) et "archive" (PUBLISHED →
+ * ARCHIVED).
+ * Remplace les anciens AnnoncePublishServlet et AnnonceArchiveServlet (code
+ * quasi-identique).
  */
-@WebServlet("/annonce/archive")
-public class AnnonceArchiveServlet extends HttpServlet {
+@WebServlet("/annonce/status")
+public class AnnonceStatusServlet extends HttpServlet {
 
+    private static final String ACTION_PUBLISH = "publish";
+    private static final String ACTION_ARCHIVE = "archive";
     private final AnnonceService annonceService = new AnnonceService();
 
     @Override
@@ -27,14 +33,28 @@ public class AnnonceArchiveServlet extends HttpServlet {
         Long userId = (Long) session.getAttribute("userId");
 
         String idParam = request.getParameter("id");
-        if (idParam == null) {
+        String action = request.getParameter("action");
+
+        if (idParam == null || action == null) {
             response.sendRedirect(request.getContextPath() + "/annonces");
             return;
         }
 
         try {
             Long id = Long.parseLong(idParam);
-            annonceService.archive(id, userId);
+
+            switch (action) {
+                case ACTION_PUBLISH:
+                    annonceService.publish(id, userId);
+                    break;
+                case ACTION_ARCHIVE:
+                    annonceService.archive(id, userId);
+                    break;
+                default:
+                    response.sendRedirect(request.getContextPath() + "/annonces");
+                    return;
+            }
+
             response.sendRedirect(request.getContextPath() + "/annonce/detail?id=" + id);
         } catch (SecurityException e) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());

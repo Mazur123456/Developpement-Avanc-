@@ -34,6 +34,8 @@ public class AnnonceMapper {
         dto.setMail(entity.getMail());
         dto.setDate(entity.getDate());
 
+        dto.setVersion(entity.getVersion());
+
         if (entity.getStatus() != null) {
             dto.setStatus(entity.getStatus().name());
         }
@@ -62,21 +64,4 @@ public class AnnonceMapper {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Convertit un AnnonceDTO en entité Annonce.
-     * Utilisé pour la création (JSON → Entity)
-     * Note : les relations (author, category) sont résolues dans le Service.
-     */
-    public static Annonce toEntity(AnnonceDTO dto) {
-        if (dto == null) {
-            return null;
-        }
-
-        Annonce entity = new Annonce();
-        entity.setTitle(dto.getTitle());
-        entity.setDescription(dto.getDescription());
-        entity.setAdress(dto.getAdress());
-        entity.setMail(dto.getMail());
-        return entity;
-    }
 }

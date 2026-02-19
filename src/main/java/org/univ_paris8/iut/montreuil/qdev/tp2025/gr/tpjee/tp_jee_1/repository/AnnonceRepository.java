@@ -47,15 +47,6 @@ public class AnnonceRepository {
         }
 
         /**
-         * Récupère toutes les annonces
-         */
-        public List<Annonce> findAll(EntityManager em) {
-                TypedQuery<Annonce> query = em.createQuery(
-                                "SELECT a FROM Annonce a ORDER BY a.date DESC", Annonce.class);
-                return query.getResultList();
-        }
-
-        /**
          * Récupère les annonces avec pagination
          */
         public List<Annonce> findAllPaginated(EntityManager em, int page, int pageSize) {
@@ -67,20 +58,6 @@ public class AnnonceRepository {
                                 Annonce.class);
                 query.setFirstResult((page - 1) * pageSize);
                 query.setMaxResults(pageSize);
-                return query.getResultList();
-        }
-
-        /**
-         * Recherche par mot-clé dans le titre ou la description
-         */
-        public List<Annonce> searchByKeyword(EntityManager em, String keyword) {
-                TypedQuery<Annonce> query = em.createQuery(
-                                "SELECT a FROM Annonce a " +
-                                                "WHERE LOWER(a.title) LIKE LOWER(:keyword) " +
-                                                "OR LOWER(a.description) LIKE LOWER(:keyword) " +
-                                                "ORDER BY a.date DESC",
-                                Annonce.class);
-                query.setParameter("keyword", "%" + keyword + "%");
                 return query.getResultList();
         }
 
@@ -99,32 +76,6 @@ public class AnnonceRepository {
                 query.setParameter("keyword", "%" + keyword + "%");
                 query.setFirstResult((page - 1) * pageSize);
                 query.setMaxResults(pageSize);
-                return query.getResultList();
-        }
-
-        /**
-         * Filtre par catégorie
-         */
-        public List<Annonce> findByCategory(EntityManager em, Long categoryId) {
-                TypedQuery<Annonce> query = em.createQuery(
-                                "SELECT a FROM Annonce a " +
-                                                "WHERE a.category.id = :categoryId " +
-                                                "ORDER BY a.date DESC",
-                                Annonce.class);
-                query.setParameter("categoryId", categoryId);
-                return query.getResultList();
-        }
-
-        /**
-         * Filtre par statut
-         */
-        public List<Annonce> findByStatus(EntityManager em, AnnonceStatus status) {
-                TypedQuery<Annonce> query = em.createQuery(
-                                "SELECT a FROM Annonce a " +
-                                                "WHERE a.status = :status " +
-                                                "ORDER BY a.date DESC",
-                                Annonce.class);
-                query.setParameter("status", status);
                 return query.getResultList();
         }
 

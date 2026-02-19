@@ -6,14 +6,22 @@ import javax.persistence.Persistence;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Classe utilitaire pour la gestion des EntityManager JPA.
  * Fournit un accès centralisé à l'EntityManagerFactory et aux EntityManager.
  */
 public class JPAUtil {
 
+    private static final Logger logger = LoggerFactory.getLogger(JPAUtil.class);
     private static final String PERSISTENCE_UNIT_NAME = "MasterAnnoncePU";
     private static EntityManagerFactory entityManagerFactory;
+
+    private JPAUtil() {
+        // Classe utilitaire
+    }
 
     // Initialisation statique de l'EntityManagerFactory
     static {
@@ -37,21 +45,20 @@ public class JPAUtil {
                 properties.put("javax.persistence.jdbc.user", dbUser);
                 properties.put("javax.persistence.jdbc.password", dbPassword);
 
-                System.out.println("[JPA] Configuration Docker détectée : " + url);
+                logger.info("Configuration Docker détectée : {}", url);
             }
 
             entityManagerFactory = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME, properties);
-            System.out.println("[JPA] EntityManagerFactory créé avec succès");
+            logger.info("EntityManagerFactory créé avec succès");
         } catch (Exception e) {
-            System.err.println("[JPA] Erreur lors de la création de l'EntityManagerFactory: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Erreur lors de la création de l'EntityManagerFactory", e);
             throw new ExceptionInInitializerError(e);
         }
     }
 
     /**
      * Retourne l'EntityManagerFactory singleton
-     * 
+     *
      * @return EntityManagerFactory
      */
     public static EntityManagerFactory getEntityManagerFactory() {
@@ -61,7 +68,7 @@ public class JPAUtil {
     /**
      * Crée et retourne un nouvel EntityManager.
      * L'appelant est responsable de fermer l'EntityManager après utilisation.
-     * 
+     *
      * @return EntityManager
      */
     public static EntityManager getEntityManager() {
@@ -75,7 +82,7 @@ public class JPAUtil {
     public static void shutdown() {
         if (entityManagerFactory != null && entityManagerFactory.isOpen()) {
             entityManagerFactory.close();
-            System.out.println("[JPA] EntityManagerFactory fermé");
+            logger.info("EntityManagerFactory fermé");
         }
     }
 }

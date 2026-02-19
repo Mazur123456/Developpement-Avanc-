@@ -12,12 +12,17 @@ import javax.ws.rs.ext.Provider;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Gestionnaire global des exceptions JAX-RS.
  * Transforme les exceptions Java en réponses HTTP JSON standardisées.
  */
 @Provider
 public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionMapper.class);
 
     @Override
     public Response toResponse(Throwable exception) {
@@ -28,12 +33,23 @@ public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
             return ((WebApplicationException) exception).getResponse();
         }
 
-        // 2. Entité non trouvée -> 404
+        // 2. Accès interdit (ownership) → 403
+        if (exception instanceof SecurityException) {
+            return buildResponse(Response.Status.FORBIDDEN, exception.getMessage());
+        }
+
+        // 3. Conflit de concurrence (@Version) → 409
+        if (exception instanceof javax.persistence.OptimisticLockException) {
+            return buildResponse(Response.Status.CONFLICT,
+                    "Conflit de concurrence : la ressource a été modifiée par un autre utilisateur");
+        }
+
+        // 4. Entité non trouvée -> 404
         if (exception instanceof EntityNotFoundException) {
             return buildResponse(Response.Status.NOT_FOUND, exception.getMessage());
         }
 
-        // 3. Validation manuelle (ValidationUtil) -> 400
+        // 5. Validation manuelle (ValidationUtil) -> 400
         if (exception instanceof ValidationUtil.ValidationException) {
             ValidationUtil.ValidationException ve = (ValidationUtil.ValidationException) exception;
             return Response.status(Response.Status.BAD_REQUEST)
@@ -42,7 +58,7 @@ public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
                     .build();
         }
 
-        // 4. Validation automatique (@Valid / Bean Validation) -> 400
+        // 6. Validation automatique (@Valid / Bean Validation) -> 400
         if (exception instanceof ConstraintViolationException) {
             ConstraintViolationException cve = (ConstraintViolationException) exception;
             Map<String, String> errors = new HashMap<>();
@@ -58,18 +74,18 @@ public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
                     .build();
         }
 
-        // 5. État invalide (ex: transition DRAFT -> DRAFT) -> 409 Conflict
+        // 7. État invalide (ex: transition DRAFT -> DRAFT) -> 409 Conflict
         if (exception instanceof InvalidStateException) {
             return buildResponse(Response.Status.CONFLICT, exception.getMessage());
         }
 
-        // 6. Autres erreurs métier -> 400 Bad Request
+        // 8. Autres erreurs métier -> 400 Bad Request
         if (exception instanceof BusinessException) {
             return buildResponse(Response.Status.BAD_REQUEST, exception.getMessage());
         }
 
-        // 7. Erreurs inattendues (NullPointer, SQL, etc.) -> 500 Internal Server Error
-        exception.printStackTrace(); // Log l'erreur côté serveur
+        // 9. Erreurs inattendues (NullPointer, SQL, etc.) -> 500 Internal Server Error
+        logger.error("Erreur interne non interceptée", exception);
         return buildResponse(Response.Status.INTERNAL_SERVER_ERROR, "Une erreur interne est survenue");
     }
 

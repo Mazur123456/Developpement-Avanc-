@@ -1,23 +1,24 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service;
 
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.User;
-import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.repository.UserRepository;
-import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.JPAUtil;
-import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.PasswordUtil;
 
-import javax.persistence.EntityManager;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Service de gestion de l'authentification (Token-based).
  * Stockage en mémoire des tokens actifs (Exercice 5).
+ * Délègue l'authentification à UserService pour éviter la duplication.
  */
 public class AuthService {
 
-    private final UserRepository userRepository = new UserRepository();
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+    private final UserService userService = new UserService();
 
     // Stockage en mémoire des tokens : Token -> User
     // ConcurrentHashMap pour thread-safety
@@ -25,25 +26,20 @@ public class AuthService {
 
     /**
      * Authentifie l'utilisateur et retourne un token si succès.
-     * 
+     * Délègue la vérification des identifiants à UserService.
+     *
      * @return Le token généré ou null si échec.
      */
     public String login(String username, String password) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            Optional<User> userOpt = userRepository.findByUsername(em, username);
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
-                if (PasswordUtil.checkPassword(password, user.getPassword())) {
-                    String token = UUID.randomUUID().toString();
-                    activeTokens.put(token, user);
-                    return token;
-                }
-            }
-            return null;
-        } finally {
-            em.close();
+        Optional<User> userOpt = userService.authenticate(username, password);
+        if (userOpt.isPresent()) {
+            String token = UUID.randomUUID().toString();
+            activeTokens.put(token, userOpt.get());
+            logger.info("Login réussi [username={}]", username);
+            return token;
         }
+        logger.warn("Échec de login [username={}]", username);
+        return null;
     }
 
     /**

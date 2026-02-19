@@ -7,20 +7,24 @@ import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.User;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.exception.EntityNotFoundException;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.exception.InvalidStateException;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.repository.AnnonceRepository;
-import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.JPAUtil;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.TransactionTemplate;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.utils.ValidationUtil;
 
-import javax.persistence.EntityManager;
+import javax.persistence.OptimisticLockException;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Service métier pour la gestion des annonces.
- * Les transactions sont gérées ici, pas dans les Repositories ni les Servlets.
+ * Les transactions sont gérées via TransactionTemplate.
  * Délègue les opérations d'accès aux données au AnnonceRepository.
  */
 public class AnnonceService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AnnonceService.class);
     private static final int DEFAULT_PAGE_SIZE = 10;
     private final AnnonceRepository annonceRepository = new AnnonceRepository();
 
@@ -29,10 +33,7 @@ public class AnnonceService {
      */
     public Annonce create(String title, String description, String adress, String mail,
             Long authorId, Long categoryId) throws ValidationUtil.ValidationException, EntityNotFoundException {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            em.getTransaction().begin();
-
+        return TransactionTemplate.executeInTransaction(em -> {
             Annonce annonce = new Annonce(title, description, adress, mail);
 
             // Associer l'auteur si fourni
@@ -53,16 +54,10 @@ public class AnnonceService {
 
             ValidationUtil.validateAndThrow(annonce);
             annonceRepository.create(em, annonce);
-            em.getTransaction().commit();
+            logger.info("Annonce créée avec succès [id={}, titre={}, auteur={}]",
+                    annonce.getId(), annonce.getTitle(), authorId);
             return annonce;
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw e;
-        } finally {
-            em.close();
-        }
+        });
     }
 
     /**
@@ -71,39 +66,37 @@ public class AnnonceService {
     public Annonce update(Long id, String title, String description, String adress,
             String mail, Long categoryId, Long userId)
             throws ValidationUtil.ValidationException, EntityNotFoundException {
-        EntityManager em = JPAUtil.getEntityManager();
         try {
-            em.getTransaction().begin();
+            return TransactionTemplate.executeInTransaction(em -> {
+                Annonce annonce = em.find(Annonce.class, id);
+                if (annonce == null) {
+                    throw new EntityNotFoundException("Annonce", id);
+                }
 
-            Annonce annonce = em.find(Annonce.class, id);
-            if (annonce == null) {
-                throw new EntityNotFoundException("Annonce", id);
-            }
+                checkOwnership(annonce, userId);
 
-            checkOwnership(annonce, userId);
+                // Exercice 7.2 : Une annonce PUBLISHED ne peut plus être modifiée
+                if (annonce.isPublished()) {
+                    throw new InvalidStateException("Une annonce publiée ne peut plus être modifiée");
+                }
 
-            annonce.setTitle(title);
-            annonce.setDescription(description);
-            annonce.setAdress(adress);
-            annonce.setMail(mail);
+                annonce.setTitle(title);
+                annonce.setDescription(description);
+                annonce.setAdress(adress);
+                annonce.setMail(mail);
 
-            if (categoryId != null) {
-                Category category = em.find(Category.class, categoryId);
-                annonce.setCategory(category);
-            }
+                if (categoryId != null) {
+                    Category category = em.find(Category.class, categoryId);
+                    annonce.setCategory(category);
+                }
 
-            // Validation avant commit
-            ValidationUtil.validateAndThrow(annonce);
-
-            em.getTransaction().commit();
-            return annonce;
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw e;
-        } finally {
-            em.close();
+                ValidationUtil.validateAndThrow(annonce);
+                logger.info("Annonce mise à jour [id={}, par userId={}]", id, userId);
+                return annonce;
+            });
+        } catch (OptimisticLockException e) {
+            throw new InvalidStateException(
+                    "Conflit de concurrence : l'annonce a été modifiée par un autre utilisateur");
         }
     }
 
@@ -111,10 +104,7 @@ public class AnnonceService {
      * Publie une annonce (DRAFT → PUBLISHED) — vérification de propriété
      */
     public Annonce publish(Long id, Long userId) throws EntityNotFoundException, InvalidStateException {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            em.getTransaction().begin();
-
+        return TransactionTemplate.executeInTransaction(em -> {
             Annonce annonce = em.find(Annonce.class, id);
             if (annonce == null) {
                 throw new EntityNotFoundException("Annonce", id);
@@ -127,26 +117,16 @@ public class AnnonceService {
             }
 
             annonce.publish();
-            em.getTransaction().commit();
+            logger.info("Annonce publiée [id={}, par userId={}]", id, userId);
             return annonce;
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw e;
-        } finally {
-            em.close();
-        }
+        });
     }
 
     /**
      * Archive une annonce (PUBLISHED → ARCHIVED) — vérification de propriété
      */
     public Annonce archive(Long id, Long userId) throws EntityNotFoundException, InvalidStateException {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            em.getTransaction().begin();
-
+        return TransactionTemplate.executeInTransaction(em -> {
             Annonce annonce = em.find(Annonce.class, id);
             if (annonce == null) {
                 throw new EntityNotFoundException("Annonce", id);
@@ -159,26 +139,16 @@ public class AnnonceService {
             }
 
             annonce.archive();
-            em.getTransaction().commit();
+            logger.info("Annonce archivée [id={}, par userId={}]", id, userId);
             return annonce;
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw e;
-        } finally {
-            em.close();
-        }
+        });
     }
 
     /**
      * Supprime une annonce — vérification de propriété
      */
     public void delete(Long id, Long userId) throws EntityNotFoundException {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            em.getTransaction().begin();
-
+        TransactionTemplate.executeInTransactionVoid(em -> {
             Annonce annonce = em.find(Annonce.class, id);
             if (annonce == null) {
                 throw new EntityNotFoundException("Annonce", id);
@@ -186,40 +156,30 @@ public class AnnonceService {
 
             checkOwnership(annonce, userId);
 
-            em.remove(annonce);
-            em.getTransaction().commit();
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
+            // Exercice 7.3 : Archivage obligatoire avant suppression
+            if (!annonce.isArchived()) {
+                throw new InvalidStateException(
+                        "L'annonce doit être archivée avant suppression (statut actuel: "
+                                + annonce.getStatus().name() + ")");
             }
-            throw e;
-        } finally {
-            em.close();
-        }
+
+            em.remove(annonce);
+            logger.info("Annonce supprimée [id={}, par userId={}]", id, userId);
+        });
     }
 
     /**
      * Trouve une annonce par son ID
      */
     public Optional<Annonce> findById(Long id) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            return annonceRepository.findById(em, id);
-        } finally {
-            em.close();
-        }
+        return TransactionTemplate.executeReadOnly(em -> annonceRepository.findById(em, id));
     }
 
     /**
      * Trouve une annonce avec ses détails (auteur et catégorie)
      */
     public Optional<Annonce> findByIdWithDetails(Long id) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            return annonceRepository.findByIdWithDetails(em, id);
-        } finally {
-            em.close();
-        }
+        return TransactionTemplate.executeReadOnly(em -> annonceRepository.findByIdWithDetails(em, id));
     }
 
     /**
@@ -230,12 +190,7 @@ public class AnnonceService {
     }
 
     public List<Annonce> findPublished(int page, int pageSize) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            return annonceRepository.findPublishedPaginated(em, page, pageSize);
-        } finally {
-            em.close();
-        }
+        return TransactionTemplate.executeReadOnly(em -> annonceRepository.findPublishedPaginated(em, page, pageSize));
     }
 
     /**
@@ -246,12 +201,7 @@ public class AnnonceService {
     }
 
     public List<Annonce> findAll(int page, int pageSize) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            return annonceRepository.findAllPaginated(em, page, pageSize);
-        } finally {
-            em.close();
-        }
+        return TransactionTemplate.executeReadOnly(em -> annonceRepository.findAllPaginated(em, page, pageSize));
     }
 
     /**
@@ -262,12 +212,8 @@ public class AnnonceService {
     }
 
     public List<Annonce> search(String keyword, int page, int pageSize) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            return annonceRepository.searchByKeywordPaginated(em, keyword, page, pageSize);
-        } finally {
-            em.close();
-        }
+        return TransactionTemplate
+                .executeReadOnly(em -> annonceRepository.searchByKeywordPaginated(em, keyword, page, pageSize));
     }
 
     /**
@@ -279,36 +225,22 @@ public class AnnonceService {
 
     public List<Annonce> findByCategoryAndStatus(Long categoryId, AnnonceStatus status,
             int page, int pageSize) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            return annonceRepository.findByCategoryAndStatus(em, categoryId, status, page, pageSize);
-        } finally {
-            em.close();
-        }
+        return TransactionTemplate.executeReadOnly(
+                em -> annonceRepository.findByCategoryAndStatus(em, categoryId, status, page, pageSize));
     }
 
     /**
      * Récupère les annonces d'un utilisateur
      */
     public List<Annonce> findByAuthor(Long authorId) {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            return annonceRepository.findByAuthor(em, authorId);
-        } finally {
-            em.close();
-        }
+        return TransactionTemplate.executeReadOnly(em -> annonceRepository.findByAuthor(em, authorId));
     }
 
     /**
      * Compte le nombre total d'annonces publiées
      */
     public long countPublished() {
-        EntityManager em = JPAUtil.getEntityManager();
-        try {
-            return annonceRepository.countPublished(em);
-        } finally {
-            em.close();
-        }
+        return TransactionTemplate.executeReadOnly(em -> annonceRepository.countPublished(em));
     }
 
     /**

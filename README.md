@@ -4,7 +4,6 @@ Application Java EE modernisée, évoluant d'une application Servlet/JSP (TP2) v
 
 ## 🎓 Contexte Pédagogique (TP3)
 
-Ce projet répond aux exigences du TP "Dev Avancé #3".
 **Objectif** : Transformer `MasterAnnonce` en un backend API professionnel.
 
 - **Stack** : Java EE / Jakarta EE pur (Pas de Spring).
@@ -100,7 +99,8 @@ Cette commande lance **PostgreSQL** (Base de données) et **Tomcat** (Serveur d'
 | **GET** | `/MasterAnnonce/api/annonces/{id}` | Détail d'une annonce | ❌ Non |
 | **POST** | `/MasterAnnonce/api/annonces` | Créer une annonce | ✅ Token |
 | **PUT** | `/MasterAnnonce/api/annonces/{id}` | Modifier (Auteur uniquement) | ✅ Token |
-| **DELETE**| `/MasterAnnonce/api/annonces/{id}` | Supprimer (Auteur uniquement)| ✅ Token |
+| **PATCH** | `/MasterAnnonce/api/annonces/{id}` | Modification partielle (Bonus) | ✅ Token |
+| **DELETE**| `/MasterAnnonce/api/annonces/{id}` | Supprimer (ARCHIVED uniquement)| ✅ Token |
 
 ## 🧪 Tests & Qualité (Exercice 10)
 
@@ -109,9 +109,36 @@ L'application dispose de deux types de tests séparés :
 1.  **Tests Unitaires (Unit)** : Testent la logique métier isolée (Services) et les Utilitaires. Rapides, pas de BDD.
 2.  **Tests d'Intégration (IT)** : Testent la persistance (Repositories) et les scénarios complets avec une base de données H2 en mémoire.
 
+**Lancer les tests** :
+```bash
+# Tests unitaires uniquement (Surefire, exclut les *IntegrationTest.java)
+./mvnw test
+
+# Tests unitaires + intégration (Surefire + Failsafe)
+./mvnw verify
+```
+
 **Pourquoi séparer ?**
 *   Les tests unitaires sont exécutés à chaque build (feedback immédiat).
 *   Les tests d'intégration sont plus lents et peuvent être exécutés moins souvent (CI/CD).
+*   Séparation via `maven-surefire-plugin` (exclut `*IntegrationTest.java`) et `maven-failsafe-plugin`.
+
+## 🔒 Règles Métier Avancées (Exercice 7)
+
+| Règle | Description |
+|-------|-------------|
+| **Ownership** | Seul l'auteur peut modifier/supprimer son annonce (→ 403 Forbidden) |
+| **PUBLISHED immutable** | Une annonce publiée ne peut plus être modifiée (→ 409 Conflict) |
+| **Archivage obligatoire** | Une annonce doit être archivée avant suppression (→ 409 Conflict) |
+| **Concurrence (@Version)** | Gestion optimiste via `@Version` JPA, conflit détecté → 409 Conflict |
+
+## 📋 Logging Structuré
+
+Utilisation de **SLF4J + Logback** pour le logging structuré :
+- Format : `timestamp [thread] LEVEL logger - message`
+- Logs dans les services (create, update, delete, publish, archive)
+- Logs d'authentification (login réussi/échoué)
+- Remplacement de `printStackTrace()` par `logger.error()` dans le GlobalExceptionMapper
 
 ## 🐛 Problèmes Rencontrés & Solutions
 

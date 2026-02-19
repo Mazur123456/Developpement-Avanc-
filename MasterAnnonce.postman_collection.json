@@ -1,0 +1,343 @@
+{
+  "info": {
+    "_postman_id": "masterannonce-collection",
+    "name": "MasterAnnonce API",
+    "description": "Collection Postman pour le TP3 - API REST MasterAnnonce.\n\nWorkflow recommandé :\n1. Lancer POST /api/login pour obtenir un token\n2. Le token est automatiquement stocké dans la variable {{authToken}}\n3. Utiliser les autres endpoints qui nécessitent le Bearer token",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/MasterAnnonce",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Exercice 1 - Setup JAX-RS",
+      "item": [
+        {
+          "name": "GET /api/helloWorld",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/helloWorld",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "helloWorld"]
+            },
+            "header": []
+          }
+        },
+        {
+          "name": "GET /api/params?name=John&age=25",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/params?name=John&age=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "params"],
+              "query": [
+                { "key": "name", "value": "John" },
+                { "key": "age", "value": "25" }
+              ]
+            },
+            "header": []
+          }
+        },
+        {
+          "name": "GET /api/params/{id}",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/params/42",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "params", "42"]
+            },
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentification",
+      "item": [
+        {
+          "name": "POST /api/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.token) {",
+                  "        pm.collectionVariables.set('authToken', jsonData.token);",
+                  "        console.log('Token stocké: ' + jsonData.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Annonces CRUD",
+      "item": [
+        {
+          "name": "GET /api/annonces (liste paginée)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces?page=1&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "GET /api/annonces/{id}",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces", "1"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "POST /api/annonces (créer)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Appartement Paris 15e\",\n    \"description\": \"Bel appartement 3 pièces, 65m², lumineux\",\n    \"adress\": \"15 Rue de la Convention, 75015 Paris\",\n    \"mail\": \"contact@example.com\",\n    \"categoryId\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT /api/annonces/{id} (modifier)",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces", "1"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Appartement Paris 15e - MODIFIÉ\",\n    \"description\": \"Bel appartement 3 pièces, 65m², lumineux, rénové\",\n    \"adress\": \"15 Rue de la Convention, 75015 Paris\",\n    \"mail\": \"contact@example.com\",\n    \"categoryId\": 1,\n    \"version\": 0\n}"
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/annonces/{id} (modifier partiellement)",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces", "1"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Nouveau titre uniquement\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/annonces/{id} (supprimer)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces", "1"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gestion du statut",
+      "item": [
+        {
+          "name": "PUT /api/annonces/{id}/publish",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces/1/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces", "1", "publish"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "PUT /api/annonces/{id}/archive",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces/1/archive",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces", "1", "archive"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tests de validation",
+      "item": [
+        {
+          "name": "POST /api/annonces - Validation Error (titre vide)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"\",\n    \"description\": \"Description test\",\n    \"mail\": \"invalid-email\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /api/annonces/99999 - 404 Not Found",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces", "99999"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "GET /api/annonces - Sans token (401)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/annonces",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "annonces"]
+            },
+            "header": []
+          }
+        }
+      ]
+    }
+  ]
+}

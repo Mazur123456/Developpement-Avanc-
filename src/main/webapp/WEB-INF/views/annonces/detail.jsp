@@ -227,17 +227,19 @@
                                         class="btn btn-primary">Modifier</a>
 
                                     <c:if test="${annonce.status == 'DRAFT'}">
-                                        <form action="${pageContext.request.contextPath}/annonce/publish" method="post"
+                                        <form action="${pageContext.request.contextPath}/annonce/status" method="post"
                                             style="display:inline;">
                                             <input type="hidden" name="id" value="${annonce.id}">
+                                            <input type="hidden" name="action" value="publish">
                                             <button type="submit" class="btn btn-success">Publier</button>
                                         </form>
                                     </c:if>
 
                                     <c:if test="${annonce.status == 'PUBLISHED'}">
-                                        <form action="${pageContext.request.contextPath}/annonce/archive" method="post"
+                                        <form action="${pageContext.request.contextPath}/annonce/status" method="post"
                                             style="display:inline;">
                                             <input type="hidden" name="id" value="${annonce.id}">
+                                            <input type="hidden" name="action" value="archive">
                                             <button type="submit" class="btn btn-warning">Archiver</button>
                                         </form>
                                     </c:if>

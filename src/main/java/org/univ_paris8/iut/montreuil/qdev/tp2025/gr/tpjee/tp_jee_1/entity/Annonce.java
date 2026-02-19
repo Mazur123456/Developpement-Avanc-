@@ -17,22 +17,22 @@ public class Annonce {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "Le titre est obligatoire")
-    @Size(max = 64, message = "Le titre ne doit pas dépasser 64 caractères")
-    @Column(nullable = false, length = 64)
+    @NotBlank(message = AnnonceConstants.TITLE_REQUIRED)
+    @Size(max = AnnonceConstants.TITLE_MAX, message = AnnonceConstants.TITLE_TOO_LONG)
+    @Column(nullable = false, length = AnnonceConstants.TITLE_MAX)
     private String title;
 
-    @Size(max = 256, message = "La description ne doit pas dépasser 256 caractères")
-    @Column(length = 256)
+    @Size(max = AnnonceConstants.DESCRIPTION_MAX, message = AnnonceConstants.DESCRIPTION_TOO_LONG)
+    @Column(length = AnnonceConstants.DESCRIPTION_MAX)
     private String description;
 
-    @Size(max = 64, message = "L'adresse ne doit pas dépasser 64 caractères")
-    @Column(length = 64)
+    @Size(max = AnnonceConstants.ADRESS_MAX, message = AnnonceConstants.ADRESS_TOO_LONG)
+    @Column(length = AnnonceConstants.ADRESS_MAX)
     private String adress;
 
-    @Email(message = "L'email doit être valide")
-    @Size(max = 64, message = "L'email ne doit pas dépasser 64 caractères")
-    @Column(length = 64)
+    @Email(message = AnnonceConstants.MAIL_INVALID)
+    @Size(max = AnnonceConstants.MAIL_MAX, message = AnnonceConstants.MAIL_TOO_LONG)
+    @Column(length = AnnonceConstants.MAIL_MAX)
     private String mail;
 
     @Column(name = "date")
@@ -49,6 +49,9 @@ public class Annonce {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @Version
+    private Long version;
 
     // Constructeurs
     public Annonce() {
@@ -135,6 +138,14 @@ public class Annonce {
 
     public void setCategory(Category category) {
         this.category = category;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     // Méthodes utilitaires pour changer le statut

@@ -1,5 +1,7 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto;
 
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.AnnonceConstants;
+
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
@@ -20,18 +22,18 @@ public class AnnonceDTO {
 
     private Long id;
 
-    @NotBlank(message = "Le titre est obligatoire")
-    @Size(max = 64, message = "Le titre ne doit pas dépasser 64 caractères")
+    @NotBlank(message = AnnonceConstants.TITLE_REQUIRED)
+    @Size(max = AnnonceConstants.TITLE_MAX, message = AnnonceConstants.TITLE_TOO_LONG)
     private String title;
 
-    @Size(max = 256, message = "La description ne doit pas dépasser 256 caractères")
+    @Size(max = AnnonceConstants.DESCRIPTION_MAX, message = AnnonceConstants.DESCRIPTION_TOO_LONG)
     private String description;
 
-    @Size(max = 64, message = "L'adresse ne doit pas dépasser 64 caractères")
+    @Size(max = AnnonceConstants.ADRESS_MAX, message = AnnonceConstants.ADRESS_TOO_LONG)
     private String adress;
 
-    @Email(message = "L'email doit être valide")
-    @Size(max = 64, message = "L'email ne doit pas dépasser 64 caractères")
+    @Email(message = AnnonceConstants.MAIL_INVALID)
+    @Size(max = AnnonceConstants.MAIL_MAX, message = AnnonceConstants.MAIL_TOO_LONG)
     private String mail;
 
     private String status;
@@ -44,6 +46,9 @@ public class AnnonceDTO {
     // Infos catégorie
     private Long categoryId;
     private String categoryLabel;
+
+    // Version pour la gestion de concurrence optimiste (@Version)
+    private Long version;
 
     // Constructeurs
     public AnnonceDTO() {
@@ -136,5 +141,13 @@ public class AnnonceDTO {
 
     public void setCategoryLabel(String categoryLabel) {
         this.categoryLabel = categoryLabel;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }
