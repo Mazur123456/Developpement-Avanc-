@@ -5,36 +5,52 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto.AnnonceCreateDTO;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto.AnnonceDTO;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto.AnnonceUpdateDTO;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.Annonce;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.User;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.exception.EntityNotFoundException;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.mapper.AnnonceMapper;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service.AnnonceService;
-import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service.AuthService;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service.UserService;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/annonces")
+@RequestMapping("/annonces")
 @RequiredArgsConstructor
 @Tag(name = "Annonces API", description = "CRUD operations for Annonces")
 public class AnnonceRestController {
 
     private final AnnonceService annonceService;
-    private final AuthService authService;
+    private final UserService userService;
     private final AnnonceMapper annonceMapper;
 
     @GetMapping
-    @Operation(summary = "Get all published annonces with pagination")
-    public ResponseEntity<List<AnnonceDTO>> getAll(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Page<Annonce> annonces = annonceService.findPublished(page, size);
-        return ResponseEntity.ok(annonceMapper.toDTOList(annonces.getContent()));
+    @Operation(summary = "Get all annonces with pagination and optional filters")
+    public ResponseEntity<Page<AnnonceDTO>> getAll(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long authorId,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            Pageable pageable) {
+
+        // TODO: Implémenter la recherche avec Specification (attendu par le prompt plus
+        // tard)
+        // Pour l'instant on fait juste le findAll basique avec pageable
+        Page<Annonce> annonces = annonceService.findAll(pageable.getPageNumber() + 1, pageable.getPageSize());
+        Page<AnnonceDTO> dtoPage = annonces.map(annonceMapper::toDTO);
+
+        return ResponseEntity.ok(dtoPage);
     }
 
     @GetMapping("/{id}")
@@ -48,9 +64,8 @@ public class AnnonceRestController {
     @PostMapping
     @Operation(summary = "Create a new annonce")
     public ResponseEntity<AnnonceDTO> create(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @Valid @RequestBody AnnonceDTO dto) {
-        User user = getAuthenticatedUser(authHeader);
+            @Valid @RequestBody AnnonceCreateDTO dto) {
+        User user = getAuthenticatedUser();
 
         Annonce created = annonceService.create(
                 dto.getTitle(),
@@ -59,15 +74,23 @@ public class AnnonceRestController {
                 dto.getMail(),
                 user.getId(),
                 dto.getCategoryId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(annonceMapper.toDTO(created));
+
+        AnnonceDTO responseDto = annonceMapper.toDTO(created);
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(responseDto.getId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(responseDto);
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update an existing annonce")
+    @Operation(summary = "Update completely an existing annonce")
     public ResponseEntity<AnnonceDTO> update(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @PathVariable Long id, @Valid @RequestBody AnnonceDTO dto) {
-        User user = getAuthenticatedUser(authHeader);
+            @PathVariable Long id, @Valid @RequestBody AnnonceUpdateDTO dto) {
+        User user = getAuthenticatedUser();
 
         Annonce updated = annonceService.update(
                 id,
@@ -77,25 +100,19 @@ public class AnnonceRestController {
                 dto.getMail(),
                 dto.getCategoryId(),
                 user.getId());
-        return ResponseEntity.ok(annonceMapper.toDTO(updated));
-    }
 
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete an annonce")
-    public ResponseEntity<Void> delete(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @PathVariable Long id) {
-        User user = getAuthenticatedUser(authHeader);
-        annonceService.delete(id, user.getId());
-        return ResponseEntity.noContent().build();
+        // (Note: La mise a jour du status complet n'est pas couverte par la methode
+        // update actuelle du service, elle sera geree plus tard ou via un mapper
+        // custom)
+
+        return ResponseEntity.ok(annonceMapper.toDTO(updated));
     }
 
     @PatchMapping("/{id}")
     @Operation(summary = "Partially update an annonce")
     public ResponseEntity<AnnonceDTO> partialUpdate(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @PathVariable Long id, @RequestBody AnnonceDTO dto) {
-        User user = getAuthenticatedUser(authHeader);
+            @PathVariable Long id, @RequestBody AnnonceUpdateDTO dto) {
+        User user = getAuthenticatedUser();
 
         Annonce existing = annonceService.findByIdWithDetails(id)
                 .orElseThrow(() -> new EntityNotFoundException("Annonce", id));
@@ -111,12 +128,25 @@ public class AnnonceRestController {
         return ResponseEntity.ok(annonceMapper.toDTO(updated));
     }
 
-    private User getAuthenticatedUser(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete an annonce")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        User user = getAuthenticatedUser();
+        annonceService.delete(id, user.getId());
+        return ResponseEntity.noContent().build(); // HTTP 204
+    }
+
+    private User getAuthenticatedUser() {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
             throw new org.springframework.security.access.AccessDeniedException("Utilisateur non authentifié");
         }
-        String token = authHeader.substring(7);
-        return authService.validateToken(token)
-                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Token invalide"));
+        org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.security.CustomUserDetails userDetails = (org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.security.CustomUserDetails) auth
+                .getPrincipal();
+
+        return userService.findById(userDetails.getId())
+                .orElseThrow(
+                        () -> new org.springframework.security.access.AccessDeniedException("Utilisateur introuvable"));
     }
 }

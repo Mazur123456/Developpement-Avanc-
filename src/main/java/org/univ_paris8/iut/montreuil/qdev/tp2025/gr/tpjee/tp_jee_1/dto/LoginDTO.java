@@ -3,18 +3,18 @@ package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto;
 import jakarta.validation.constraints.NotBlank;
 
 public class LoginDTO {
-    @NotBlank(message = "Le nom d'utilisateur est obligatoire")
-    private String username;
+    @NotBlank(message = "L'email est obligatoire")
+    private String email;
 
     @NotBlank(message = "Le mot de passe est obligatoire")
     private String password;
 
-    public String getUsername() {
-        return username;
+    public String getEmail() {
+        return email;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getPassword() {
