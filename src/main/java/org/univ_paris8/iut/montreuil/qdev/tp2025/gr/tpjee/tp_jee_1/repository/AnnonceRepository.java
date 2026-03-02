@@ -11,7 +11,20 @@ import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.Annonc
 import java.util.List;
 import java.util.Optional;
 
-public interface AnnonceRepository extends JpaRepository<Annonce, Long> {
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
+public interface AnnonceRepository extends JpaRepository<Annonce, Long>, JpaSpecificationExecutor<Annonce> {
+
+        // --- Méthodes Spring Data JPA (génération automatique) ---
+        Page<Annonce> findByAuthorId(Long authorId, Pageable pageable);
+
+        Page<Annonce> findByCategoryId(Long categoryId, Pageable pageable);
+
+        Page<Annonce> findByStatus(AnnonceStatus status, Pageable pageable);
+
+        // --- Recherche Full-Text (JPQL) ---
+        @Query("SELECT a FROM Annonce a WHERE LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(a.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+        Page<Annonce> searchByTitleOrDescriptionFullText(@Param("keyword") String keyword, Pageable pageable);
 
         @Query("SELECT a FROM Annonce a LEFT JOIN FETCH a.author LEFT JOIN FETCH a.category WHERE a.id = :id")
         Optional<Annonce> findByIdWithDetails(@Param("id") Long id);
