@@ -158,5 +158,15 @@ Utilisation de **SLF4J + Logback** pour le logging structuré :
 *   **Problème** : Hardcoder les accès BDD dans `persistence.xml` casse le déploiement sur différents environnements.
 *   **Solution** : Utilisation d'une classe utilitaire `JPAUtil` qui lit les **variables d'environnement** (`DB_HOST`, `DB_PORT`) pour surcharger la configuration à la volée.
 
+## ⚙️ Intégration Continue (CI) : Testcontainers vs Service DB
+
+Dans notre pipeline CI GitHub Actions (`.github/workflows/ci.yml`), nous avons choisi d'utiliser **Testcontainers** plutôt qu'un **Service PostgreSQL détaché** (les conteneurs de services Github Actions).
+
+**Justification de Testcontainers pour la CI :**
+1. **Isolation parfaite :** Chaque test ou classe de test démarre son environnement vierge et peut détruire la base à la fin, évitant les conflits de données entre tests.
+2. **Isolement de l'environnement :** Si notre CI utilise un service PostgreSQL global, tous les tests attaqueront la même DB. Testcontainers crée un conteneur temporaire avec un port aléatoire, évitant l'enfer des conflits de ports et les corruptions de données.
+3. **Fidélité au développement local :** Les développeurs exécutant `mvn verify` sur leur poste vont déclencher Testcontainers. La CI va utiliser ce même mécanisme, garantissant qu'il n'y a aucune surprise ("ça marche sur ma machine, pas en CI").
+4. **Moins de configuration DevOps :** Pas besoin de maintenir de longs blocs de configuration YAML pour les `services:` dans le fichier Github Actions. Le cycle de vie de la BDD est géré entièrement par le code Java (JUnit & Testcontainers).
+
 ## 📄 Licence
 Projet universitaire - BUT 3 S6.R5 - Développement Avancé
