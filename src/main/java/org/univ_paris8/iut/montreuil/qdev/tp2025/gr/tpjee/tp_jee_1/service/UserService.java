@@ -30,7 +30,11 @@ public class UserService {
         }
 
         String hashedPassword = PasswordUtil.hashPassword(password);
-        User user = new User(username, email, hashedPassword);
+        User user = User.builder()
+                .username(username)
+                .email(email)
+                .password(hashedPassword)
+                .build();
 
         user = userRepository.save(user);
         log.info("Utilisateur inscrit [id={}, username={}]", user.getId(), username);

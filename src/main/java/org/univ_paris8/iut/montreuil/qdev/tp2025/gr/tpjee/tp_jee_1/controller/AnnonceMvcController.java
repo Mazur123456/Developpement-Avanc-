@@ -121,7 +121,12 @@ public class AnnonceMvcController {
         } catch (Exception e) {
             model.addAttribute("error", "Erreur de modification : " + e.getMessage());
 
-            Annonce temp = new Annonce(title, description, adress, mail);
+            Annonce temp = Annonce.builder()
+                    .title(title)
+                    .description(description)
+                    .adress(adress)
+                    .mail(mail)
+                    .build();
             temp.setId(id);
             model.addAttribute("annonce", temp);
             model.addAttribute("categories", categoryService.findAll());

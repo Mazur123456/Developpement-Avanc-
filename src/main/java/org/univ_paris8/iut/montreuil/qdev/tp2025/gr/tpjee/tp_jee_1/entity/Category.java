@@ -3,6 +3,7 @@ package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,10 +12,15 @@ import java.util.List;
  */
 @Entity
 @Table(name = "category")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Category {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "category_seq")
+    @SequenceGenerator(name = "category_seq", sequenceName = "category_id_seq", allocationSize = 1)
     private Long id;
 
     @NotBlank(message = "Le libellé de la catégorie est obligatoire")
@@ -23,38 +29,8 @@ public class Category {
     private String label;
 
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Builder.Default
     private List<Annonce> annonces = new ArrayList<>();
-
-    // Constructeurs
-    public Category() {
-    }
-
-    public Category(String label) {
-        this.label = label;
-    }
-
-    // Getters et Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getLabel() {
-        return label;
-    }
-
-    public void setLabel(String label) {
-        this.label = label;
-    }
-
-    public List<Annonce> getAnnonces() {
-        return annonces;
-    }
-
-    public void setAnnonces(List<Annonce> annonces) {
-        this.annonces = annonces;
-    }
 }

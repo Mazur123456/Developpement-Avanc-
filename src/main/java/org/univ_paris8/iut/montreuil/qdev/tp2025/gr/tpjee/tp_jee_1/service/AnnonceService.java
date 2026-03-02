@@ -34,7 +34,12 @@ public class AnnonceService {
     @Transactional
     public Annonce create(String title, String description, String adress, String mail,
             Long authorId, Long categoryId) throws EntityNotFoundException {
-        Annonce annonce = new Annonce(title, description, adress, mail);
+        Annonce annonce = Annonce.builder()
+                .title(title)
+                .description(description)
+                .adress(adress)
+                .mail(mail)
+                .build();
 
         if (authorId != null) {
             User author = userRepository.findById(authorId)

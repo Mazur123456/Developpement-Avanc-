@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.*;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,10 +14,15 @@ import java.util.List;
  */
 @Entity
 @Table(name = "users")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_seq")
+    @SequenceGenerator(name = "users_seq", sequenceName = "users_id_seq", allocationSize = 1)
     private Long id;
 
     @NotBlank(message = "Le nom d'utilisateur est obligatoire")
@@ -35,71 +41,14 @@ public class User {
     private String password;
 
     @Column(name = "created_at")
-    private Timestamp createdAt;
+    @Builder.Default
+    private Timestamp createdAt = new Timestamp(System.currentTimeMillis());
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Builder.Default
     private List<Annonce> annonces = new ArrayList<>();
-
-    // Constructeurs
-    public User() {
-        this.createdAt = new Timestamp(System.currentTimeMillis());
-    }
-
-    public User(String username, String email, String password) {
-        this();
-        this.username = username;
-        this.email = email;
-        this.password = password;
-    }
-
-    // Getters et Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public List<Annonce> getAnnonces() {
-        return annonces;
-    }
-
-    public void setAnnonces(List<Annonce> annonces) {
-        this.annonces = annonces;
-    }
 
     // Méthode utilitaire pour ajouter une annonce
     public void addAnnonce(Annonce annonce) {

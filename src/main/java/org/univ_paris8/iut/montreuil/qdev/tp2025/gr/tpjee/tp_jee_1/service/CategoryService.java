@@ -24,7 +24,7 @@ public class CategoryService {
             throw new DuplicateEntityException("label", label);
         }
 
-        Category category = new Category(label);
+        Category category = Category.builder().label(label).build();
         category = categoryRepository.save(category);
         log.info("Catégorie créée [id={}, label={}]", category.getId(), label);
         return category;

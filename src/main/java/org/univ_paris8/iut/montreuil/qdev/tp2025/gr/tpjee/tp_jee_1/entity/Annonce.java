@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.*;
 import java.sql.Timestamp;
 
 /**
@@ -11,10 +12,15 @@ import java.sql.Timestamp;
  */
 @Entity
 @Table(name = "annonce")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Annonce {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "annonce_seq")
+    @SequenceGenerator(name = "annonce_seq", sequenceName = "annonce_id_seq", allocationSize = 1)
     private Long id;
 
     @NotBlank(message = AnnonceConstants.TITLE_REQUIRED)
@@ -36,117 +42,28 @@ public class Annonce {
     private String mail;
 
     @Column(name = "date")
-    private Timestamp date;
+    @Builder.Default
+    private Timestamp date = new Timestamp(System.currentTimeMillis());
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Builder.Default
     private AnnonceStatus status = AnnonceStatus.DRAFT;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User author;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Category category;
 
     @Version
     private Long version;
-
-    // Constructeurs
-    public Annonce() {
-        this.date = new Timestamp(System.currentTimeMillis());
-        this.status = AnnonceStatus.DRAFT;
-    }
-
-    public Annonce(String title, String description, String adress, String mail) {
-        this();
-        this.title = title;
-        this.description = description;
-        this.adress = adress;
-        this.mail = mail;
-    }
-
-    // Getters et Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getAdress() {
-        return adress;
-    }
-
-    public void setAdress(String adress) {
-        this.adress = adress;
-    }
-
-    public String getMail() {
-        return mail;
-    }
-
-    public void setMail(String mail) {
-        this.mail = mail;
-    }
-
-    public Timestamp getDate() {
-        return date;
-    }
-
-    public void setDate(Timestamp date) {
-        this.date = date;
-    }
-
-    public AnnonceStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(AnnonceStatus status) {
-        this.status = status;
-    }
-
-    public User getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(User author) {
-        this.author = author;
-    }
-
-    public Category getCategory() {
-        return category;
-    }
-
-    public void setCategory(Category category) {
-        this.category = category;
-    }
-
-    public Long getVersion() {
-        return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
-    }
 
     // Méthodes utilitaires pour changer le statut
     public void publish() {
