@@ -1,6 +1,6 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 public class LoginDTO {
     @NotBlank(message = "Le nom d'utilisateur est obligatoire")

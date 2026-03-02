@@ -2,22 +2,11 @@ package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto;
 
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.AnnonceConstants;
 
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.sql.Timestamp;
 
-/**
- * DTO (Data Transfer Object) pour l'entité Annonce.
- * Sépare la couche REST de la couche JPA :
- * - On n'expose pas les entités JPA directement au client
- * - On contrôle exactement les champs envoyés/reçus en JSON
- *
- * Les annotations @NotBlank, @Size, @Email servent à la validation
- * automatique via Bean Validation (JSR-380).
- * Quand on met @Valid dans la Resource, Jersey valide avant d'exécuter la
- * méthode.
- */
 public class AnnonceDTO {
 
     private Long id;
