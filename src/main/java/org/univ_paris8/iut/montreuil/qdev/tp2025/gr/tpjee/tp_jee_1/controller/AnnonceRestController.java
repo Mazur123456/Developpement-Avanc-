@@ -35,8 +35,16 @@ public class AnnonceRestController {
     private final AnnonceMapper annonceMapper;
 
     @GetMapping
-    @Operation(summary = "Get all annonces with pagination and optional filters")
-    public ResponseEntity<Page<AnnonceDTO>> getAll(
+    @Operation(summary = "Get all annonces with pagination")
+    public ResponseEntity<Page<AnnonceDTO>> getAll(Pageable pageable) {
+        Page<Annonce> annonces = annonceService.findAll(pageable.getPageNumber() + 1, pageable.getPageSize());
+        Page<AnnonceDTO> dtoPage = annonces.map(annonceMapper::toDTO);
+        return ResponseEntity.ok(dtoPage);
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search annonces with dynamic filters and pagination")
+    public ResponseEntity<Page<AnnonceDTO>> search(
             @ModelAttribute AnnonceFilterDTO filter,
             Pageable pageable) {
 
