@@ -1,32 +1,25 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto;
 
+import jakarta.validation.constraints.Email;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.AnnonceStatus;
 
-import java.sql.Timestamp;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AnnonceDTO {
-    private Long id;
+public class AnnonceUpdateDTO {
+
     private String title;
     private String description;
-
-    // Champs existants de l'Entité originale Conservés
     private String adress;
+
+    @Email
     private String mail;
 
-    private Timestamp date; // Équivalent de createdAt
     private AnnonceStatus status;
-
-    private Long authorId;
-    private String authorName; // Récupéré de author.username
-
     private Long categoryId;
-    private String categoryName; // Récupéré de category.label
 }
