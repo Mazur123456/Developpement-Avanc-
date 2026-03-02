@@ -1,172 +1,489 @@
-# MasterAnnonce - API Backend (TP3)
+# MasterAnnonce API — TP Développement Avancé #4
 
-Application Java EE modernisée, évoluant d'une application Servlet/JSP (TP2) vers une **API REST JAX-RS sécurisée et stateless** (TP3), toujours basée sur JPA/Hibernate et une architecture en couches.
-
-## 🎓 Contexte Pédagogique (TP3)
-
-**Objectif** : Transformer `MasterAnnonce` en un backend API professionnel.
-
-- **Stack** : Java EE / Jakarta EE pur (Pas de Spring).
-- **Communication** : JSON uniquement.
-- **Sécurité** : Stateless (Token-based).
-- **Qualité** : Tests unitaires & intégration, Architecture en couches.
-
-## 📦 Technologies Utilisées
-
-- **Java 11** + **Maven 3+**
-- **JAX-RS (Jersey 2.x)** : Framework REST pour l'exposition des ressources.
-    - *Choix de configuration* : Utilisation de `ResourceConfig` (Jersey) plutôt que `Application` standard pour une configuration plus flexible des packages et des filtres.
-- **Jackson** : Sérialisation/Désérialisation JSON.
-- **JPA 2.2** (javax.persistence) + **Hibernate ORM 5.6** : Persistance.
-- **PostgreSQL** : Base de données relationnelle (Driver JDBC 42.7).
-- **Bean Validation** (Hibernate Validator 6.2) : Validation des DTOs.
-- **JUnit 5 + Mockito** : Tests unitaires et d'intégration.
-- **Bootstrap 5.3.0** : (Héritage TP2) Pour les pages webs résiduelles.
-
-## 🏗️ Architecture Technique
-
-Architecture en couches stricte respectant le principe de séparation des responsabilités :
-
-```
-src/main/java/org/univ_paris8/iut/montreuil/qdev/tp2025/gr/tpjee/tp_jee_1/
-├── entity/         # Entités JPA (User, Category, Annonce) - Modèle de données
-├── dto/            # DTOs (Data Transfer Objects) - Contrats d'interface API
-├── repository/     # Variable d'accès aux données (JPQL pur, Stateless, sans transaction)
-├── service/        # Logique métier & Gestion des Transactions (ACID)
-├── resource/       # Contrôleurs JAX-RS (Endpoints HTTP, validation entrées, retour JSON)
-├── filter/         # Filtres JAX-RS (Sécurité AuthFilter, CORS, etc.)
-├── exception/      # Gestion centralisée des erreurs (GlobalExceptionMapper)
-└── utils/          # Utilitaires (JPAUtil pour l'EMF, PasswordUtil pour le hachage)
-```
-
-### Justification de l'Architecture
-*   **Resource vs Service** : Les contrôleurs JAX-RS (`Resource`) ne contiennent *aucune* logique métier. Ils ne font que déléguer au `Service` et gérer le protocole HTTP (Codes 200, 400, 404...).
-*   **Service vs Repository** : Les Services gèrent les transactions (`begin`/`commit`). Les Repositories sont passifs et reçoivent l'`EntityManager` injecté par le Service.
-
-## 🔐 Authentification & Sécurité (Exercice 5 & 6)
-
-L'application implémente une sécurité **Stateless** (sans session serveur `HttpSession`) basée sur des **Tokens**.
-
-### Flow d'Authentification
-1.  **Login** (`POST /api/login`) :
-    *   Le client envoie `{"username": "...", "password": "..."}`.
-    *   Le serveur vérifie les identifiants hashés (SHA-256).
-    *   Si OK, le serveur génère un **Token Unique** (UUID) stocké temporairement en mémoire (`AuthService`).
-    *   Le serveur retourne `{"token": "..."}`.
-2.  **Accès Sécurisé** :
-    *   Pour accéder aux routes protégées (ex: `POST /api/annonces`), le client **doit** envoyer le header : `Authorization: Bearer <token>`.
-3.  **Filtrage** (`AuthFilter`) :
-    *   Intercepte chaque requête API.
-    *   Vérifie la présence et la validité du token.
-    *   Si valide : Reconstitue l'identité utilisateur (`SecurityContext`) pour la requête en cours.
-    *   Si invalide : Retourne immédiatement `401 Unauthorized`.
-
-## 🚀 Installation et Démarrage
-
-### Prérequis
-- Java 11+
-- Maven 3+
-- Docker & Docker Compose
-
-### Lancement avec Docker ("Tout en un")
-Cette commande lance **PostgreSQL** (Base de données) et **Tomcat** (Serveur d'Application) configurés automatiquement.
-
-1. **Nettoyage (Optionnel)** :
-   ```bash
-   docker-compose down
-   ```
-2. **Compilation (Obligatoire)** : Le Dockerfile copiant le .war, il faut le générer avant.
-   ```bash
-   ./mvnw clean package
-   ```
-3. **Lancement** :
-   ```bash
-   docker-compose up --build
-   ```
-
-> **🏠 Application Web** : `http://localhost:8080/MasterAnnonce/` (Ou `index.jsp`)
-> **🔌 Accès API** : `http://localhost:8080/MasterAnnonce/api/annonces`
-> **🔑 Login** : `POST http://localhost:8080/MasterAnnonce/api/login`
+> **Migration vers Spring Boot 3 – Sécurité JWT, Documentation, Tests & Industrialisation**
+>
+> Projet universitaire BUT 3 — S6.R5 — Développement Avancé
 
 ---
 
-## 📡 Endpoints API Principaux
+## 📋 Sommaire
 
-| Verbe | URI | Description | Auth |
-|-------|-----|-------------|------|
-| **POST** | `/MasterAnnonce/api/login` | Récupération du token | ❌ Non |
-| **GET** | `/MasterAnnonce/api/annonces` | Liste paginée des annonces | ❌ Non |
-| **GET** | `/MasterAnnonce/api/annonces/{id}` | Détail d'une annonce | ❌ Non |
-| **POST** | `/MasterAnnonce/api/annonces` | Créer une annonce | ✅ Token |
-| **PUT** | `/MasterAnnonce/api/annonces/{id}` | Modifier (Auteur uniquement) | ✅ Token |
-| **PATCH** | `/MasterAnnonce/api/annonces/{id}` | Modification partielle (Bonus) | ✅ Token |
-| **DELETE**| `/MasterAnnonce/api/annonces/{id}` | Supprimer (ARCHIVED uniquement)| ✅ Token |
+1. [Architecture Technique](#-architecture-technique)
+2. [Stack Technologique](#-stack-technologique)
+3. [Démarrage rapide](#-démarrage-rapide)
+4. [Endpoints API](#-endpoints-api)
+5. [Authentification JWT](#-authentification-jwt)
+6. [Composants Clés](#-composants-clés)
+7. [Tests](#-tests)
+8. [Documentation OpenAPI](#-documentation-openapi--swagger)
+9. [Monitoring Actuator](#-monitoring-actuator)
+10. [Docker & Déploiement](#-docker--déploiement)
+11. [CI/CD — GitHub Actions](#-cicd--github-actions)
+12. [Problèmes Rencontrés & Solutions](#-problèmes-rencontrés--solutions)
 
-## 🧪 Tests & Qualité (Exercice 10)
+---
 
-L'application dispose de deux types de tests séparés :
+## 🏗️ Architecture Technique
 
-1.  **Tests Unitaires (Unit)** : Testent la logique métier isolée (Services) et les Utilitaires. Rapides, pas de BDD.
-2.  **Tests d'Intégration (IT)** : Testent la persistance (Repositories) et les scénarios complets avec une base de données H2 en mémoire.
+Architecture en couches strict (**Partie I, Ex. 2**) :
 
-**Lancer les tests** :
-```bash
-# Tests unitaires uniquement (Surefire, exclut les *IntegrationTest.java)
-./mvnw test
-
-# Tests unitaires + intégration (Surefire + Failsafe)
-./mvnw verify
+```
+src/main/java/org/.../tp_jee_1/
+│
+├── controller/       # @RestController  — Reçoit les requêtes HTTP, délègue aux services
+│   ├── AnnonceRestController.java
+│   ├── AuthRestController.java
+│   ├── CategoryRestController.java
+│   ├── MetaRestController.java
+│   └── CustomErrorController.java
+│
+├── service/          # Logique métier, règles d'accès, transactions (@Transactional)
+│   ├── AnnonceService.java
+│   ├── CategoryService.java
+│   ├── UserService.java
+│   └── CustomUserDetailsService.java
+│
+├── repository/       # Spring Data JPA — pas de JPQL géante
+│   ├── AnnonceRepository.java       (JpaSpecificationExecutor)
+│   ├── AnnonceSpecifications.java   (recherche dynamique)
+│   ├── CategoryRepository.java
+│   └── UserRepository.java
+│
+├── dto/              # Contrat API — jamais les entités exposées directement
+│   ├── AnnonceDTO.java / AnnonceCreateDTO.java / AnnonceUpdateDTO.java
+│   ├── AnnonceFilterDTO.java
+│   ├── CategoryDTO.java
+│   ├── LoginDTO.java / TokenDTO.java
+│
+├── mapper/           # MapStruct — conversions automatiques entité ↔ DTO
+│   ├── AnnonceMapper.java
+│   └── CategoryMapper.java
+│
+├── entity/           # Modèle JPA (Annonce, User, Category, AnnonceStatus)
+├── security/         # JWT: JwtUtil, JwtAuthenticationFilter, CustomUserDetails(Service)
+├── aspect/           # Spring AOP: LoggingAspect (durée, erreurs, correlationId)
+├── filter/           # OncePerRequestFilter: CorrelationIdFilter (MDC)
+├── config/           # SecurityConfig, OpenApiConfig, DataInitializer
+└── exception/        # GlobalExceptionHandler, EntityNotFoundException, etc.
 ```
 
-**Pourquoi séparer ?**
-*   Les tests unitaires sont exécutés à chaque build (feedback immédiat).
-*   Les tests d'intégration sont plus lents et peuvent être exécutés moins souvent (CI/CD).
-*   Séparation via `maven-surefire-plugin` (exclut `*IntegrationTest.java`) et `maven-failsafe-plugin`.
+---
 
-## 🔒 Règles Métier Avancées (Exercice 7)
+## 💻 Stack Technologique
 
-| Règle | Description |
-|-------|-------------|
-| **Ownership** | Seul l'auteur peut modifier/supprimer son annonce (→ 403 Forbidden) |
-| **PUBLISHED immutable** | Une annonce publiée ne peut plus être modifiée (→ 409 Conflict) |
-| **Archivage obligatoire** | Une annonce doit être archivée avant suppression (→ 409 Conflict) |
-| **Concurrence (@Version)** | Gestion optimiste via `@Version` JPA, conflit détecté → 409 Conflict |
+| Technologie | Version | Usage |
+|--|--|--|
+| Java | 17 | Runtime principal |
+| Spring Boot | 3.2.5 | Framework général |
+| Spring Web MVC | — | REST API |
+| Spring Data JPA | — | Persistance, Specifications |
+| Spring Security 6 | — | Authentification, RBAC |
+| Spring AOP | — | Logging transversal |
+| Hibernate ORM 6 | — | JPA Provider |
+| PostgreSQL | 16 | Base de données |
+| MapStruct | 1.5.5 | Mapping DTO ↔ Entités |
+| Lombok | Latest | Boilerplate Java |
+| jjwt | 0.12.5 | Génération/validation JWT |
+| SpringDoc OpenAPI | 2.5.0 | Documentation Swagger |
+| Spring Actuator | — | Health, Info |
+| JUnit 5 + Mockito | — | Tests unitaires |
+| Testcontainers | — | Tests d'intégration |
+| Docker + Compose | — | Déploiement local |
 
-## 📋 Logging Structuré
+---
 
-Utilisation de **SLF4J + Logback** pour le logging structuré :
-- Format : `timestamp [thread] LEVEL logger - message`
-- Logs dans les services (create, update, delete, publish, archive)
-- Logs d'authentification (login réussi/échoué)
-- Remplacement de `printStackTrace()` par `logger.error()` dans le GlobalExceptionMapper
+## 🚀 Démarrage Rapide
 
-## 🐛 Problèmes Rencontrés & Solutions
+### Prérequis
 
-### 1. LazyInitializationException
-*   **Problème** : Accès aux collections/entités liées (`annonce.getAuthor()`) après la fermeture de la transaction/EntityManager lors de la sérialisation JSON.
-*   **Solution** : Utilisation systématique de requêtes **`JOIN FETCH`** dans les repositories pour charger les données nécessaires en une seule fois.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (inclut Docker Compose)
+- Java 17+ et Maven 3.9+ (optionnel, pour développer/tester localement)
 
-### 2. Conflit Servlet / JAX-RS
-*   **Problème** : Les anciens Servlets (TP2) captaient certaines URL ou entraient en conflit avec le mapping `/api/*`.
-*   **Solution** : Configuration précise dans `web.xml` pour isoler `JerseyServlet` sur `/api/*` et laisser les anciens Servlets sur `/`.
+### Lancement avec Docker Compose (recommandé)
 
-### 3. Sécurité Stateless sans Session
-*   **Problème** : Comment sécuriser l'API sans utiliser le mécanisme `HttpSession` de Java EE ?
-*   **Solution** : Implémentation manuelle d'un système de Token (Map en mémoire) et surcharge du `SecurityContext` de JAX-RS pour injecter l'utilisateur courant dans les Ressources.
+```bash
+# 1. Cloner le dépôt
+git clone <URL_REPO>
+cd Developpement-Avanc-
 
-### 4. Configuration Docker vs Local
-*   **Problème** : Hardcoder les accès BDD dans `persistence.xml` casse le déploiement sur différents environnements.
-*   **Solution** : Utilisation d'une classe utilitaire `JPAUtil` qui lit les **variables d'environnement** (`DB_HOST`, `DB_PORT`) pour surcharger la configuration à la volée.
+# 2. Lancer l'application et la base de données
+docker-compose up --build
 
-## ⚙️ Intégration Continue (CI) : Testcontainers vs Service DB
+# 3. Pour effacer les données et tout recréer
+docker-compose down -v && docker-compose up --build
+```
 
-Dans notre pipeline CI GitHub Actions (`.github/workflows/ci.yml`), nous avons choisi d'utiliser **Testcontainers** plutôt qu'un **Service PostgreSQL détaché** (les conteneurs de services Github Actions).
+L'application est disponible sur **http://localhost:8080**
 
-**Justification de Testcontainers pour la CI :**
-1. **Isolation parfaite :** Chaque test ou classe de test démarre son environnement vierge et peut détruire la base à la fin, évitant les conflits de données entre tests.
-2. **Isolement de l'environnement :** Si notre CI utilise un service PostgreSQL global, tous les tests attaqueront la même DB. Testcontainers crée un conteneur temporaire avec un port aléatoire, évitant l'enfer des conflits de ports et les corruptions de données.
-3. **Fidélité au développement local :** Les développeurs exécutant `mvn verify` sur leur poste vont déclencher Testcontainers. La CI va utiliser ce même mécanisme, garantissant qu'il n'y a aucune surprise ("ça marche sur ma machine, pas en CI").
-4. **Moins de configuration DevOps :** Pas besoin de maintenir de longs blocs de configuration YAML pour les `services:` dans le fichier Github Actions. Le cycle de vie de la BDD est géré entièrement par le code Java (JUnit & Testcontainers).
+### Lancement local (avec PostgreSQL installé)
+
+```bash
+# Créer la base de données
+createdb master_annonce
+
+# Configurer les variables d'environnement
+export DATABASE_URL=jdbc:postgresql://localhost:5432/master_annonce
+export DB_USER=postgres
+export DB_PASSWORD=postgres
+
+# Lancer
+mvn spring-boot:run
+```
+
+### Comptes de test (injectés via DataInitializer)
+
+| Email | Mot de passe | Rôle |
+|--|--|--|
+| `admin@test.com` | `Admin1234!` | ADMIN |
+| `user@user.com` | `password` | USER |
+
+---
+
+## 📡 Endpoints API
+
+> **Base URL** : `http://localhost:8080`
+> Pour tous les endpoints protégés, ajouter le header : `Authorization: Bearer <token>`
+
+### 🔐 Authentification
+
+| Méthode | Endpoint | Auth | Description |
+|--|--|--|--|
+| `POST` | `/api/auth/login` | ❌ | Login → retourne un JWT |
+
+**Exemple de requête login :**
+```json
+POST /api/auth/login
+{
+  "email": "admin@test.com",
+  "password": "Admin1234!"
+}
+```
+
+**Réponse :**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1...",
+  "expiresIn": 3600,
+  "userId": 1,
+  "roles": ["ROLE_ADMIN"]
+}
+```
+
+### 📣 Annonces
+
+| Méthode | Endpoint | Auth | Rôle | Description |
+|--|--|--|--|--|
+| `GET` | `/annonces` | ✅ | USER/ADMIN | Liste paginée de toutes les annonces |
+| `GET` | `/annonces/search` | ✅ | USER/ADMIN | Recherche avec filtres dynamiques |
+| `GET` | `/annonces/{id}` | ✅ | USER/ADMIN | Détail d'une annonce |
+| `POST` | `/annonces` | ✅ | USER/ADMIN | Créer une annonce (201 Created) |
+| `PUT` | `/annonces/{id}` | ✅ | Auteur | Mise à jour complète (auteur uniquement) |
+| `PATCH` | `/annonces/{id}` | ✅ | Auteur | Mise à jour partielle |
+| `DELETE` | `/annonces/{id}` | ✅ | **ADMIN** | Supprimer une annonce (204 No Content) |
+
+**Paramètres de recherche (`GET /annonces/search`) :**
+
+| Paramètre | Type | Description |
+|--|--|--|
+| `q` | `String` | Recherche LIKE sur `title` et `description` |
+| `status` | `DRAFT\|PUBLISHED\|ARCHIVED` | Filtre exact sur le statut |
+| `categoryId` | `Long` | Filtre sur la catégorie |
+| `authorId` | `Long` | Filtre sur l'auteur |
+| `fromDate` | `LocalDate (yyyy-MM-dd)` | Borne inférieure de date |
+| `toDate` | `LocalDate (yyyy-MM-dd)` | Borne supérieure de date |
+| `page` | `int` | Numéro de la page (défaut: 0) |
+| `size` | `int` | Taille de la page (défaut: 10) |
+
+### 🗂️ Catégories
+
+| Méthode | Endpoint | Auth | Rôle | Description |
+|--|--|--|--|--|
+| `GET` | `/categories` | ❌ | PUBLIC | Liste de toutes les catégories |
+| `GET` | `/categories/{id}` | ❌ | PUBLIC | Détail d'une catégorie |
+| `POST` | `/categories` | ✅ | **ADMIN** | Créer une catégorie (201) |
+| `PUT` | `/categories/{id}` | ✅ | **ADMIN** | Modifier une catégorie |
+| `DELETE` | `/categories/{id}` | ✅ | **ADMIN** | Supprimer une catégorie (204) |
+
+### 🔬 Méta (Introspection)
+
+| Méthode | Endpoint | Auth | Description |
+|--|--|--|--|
+| `GET` | `/meta/annonces` | ✅ | Liste les champs filtrables/triables de l'entité `Annonce` via réflexion Java |
+
+---
+
+## 🔐 Authentification JWT
+
+### Flow
+
+```
+Client                    API
+  │                         │
+  │──POST /auth/login──────>│
+  │   {email, password}     │
+  │<──{token, roles}────────│
+  │                         │
+  │──GET /annonces──────────│
+  │  Authorization: Bearer  │
+  │             <token>     │
+  │<──{data}────────────────│
+```
+
+### Configuration (`application.yml`)
+
+```yaml
+app:
+  jwt:
+    secret: <secret-256-bits>
+    expiration: 3600  # 1h
+```
+
+### Claims du token JWT
+
+| Claim | Description |
+|--|--|
+| `sub` | Email de l'utilisateur |
+| `userId` | ID de l'utilisateur en base |
+| `roles` | Liste des rôles (`ROLE_ADMIN`, `ROLE_USER`) |
+| `exp` | Timestamp d'expiration |
+
+---
+
+## 🧩 Composants Clés
+
+### 🔬 Recherche Dynamique (Specifications)
+
+Implémentée dans `AnnonceSpecifications.java` avec `JpaSpecificationExecutor`. **Aucune JPQL géante** — chaque critère est une méthode `static` indépendante :
+
+```java
+AnnonceSpecifications.hasKeyword(q)       // LIKE sur title et description
+AnnonceSpecifications.hasStatus(status)   // Égalité exacte
+AnnonceSpecifications.hasCategoryId(id)   // Relation Category
+AnnonceSpecifications.hasAuthorId(id)     // Relation User
+AnnonceSpecifications.createdBetween(from, to) // Plage de dates
+```
+
+### 🗒️ Logging Transversal (AOP)
+
+`LoggingAspect.java` intercepte **tous les appels de service** (`@Around`) :
+
+```
+[AnnonceService] create(Titre, Description...) - 45ms | OK
+[AnnonceService] update(100, ...) - 12ms | ERROR: SecurityException - Not author
+```
+
+- Masquage automatique des paramètres sensibles (`password`, `token`, `secret`)
+- Pas de lazy loading involontaire (on log le type Simple, pas `.toString()`)
+
+### 🔗 Correlation ID
+
+`CorrelationIdFilter.java` génère un UUID unique par requête, propagé via `MDC` :
+
+```
+[X-Correlation-ID: 3fa85f64-5717] INFO  AnnonceService - create() - 12ms | OK
+```
+
+### 🗺️ MapStruct
+
+Toutes les conversions entité ↔ DTO passent par les mappers générés à la compilation :
+- `AnnonceMapper` : `toDTO(Annonce)`, `toEntity(AnnonceCreateDTO)`, `updateFromDTO(@MappingTarget)`
+- `CategoryMapper` : `toDTO(Category)`, `toEntity(CategoryDTO)`
+
+---
+
+## 🧪 Tests
+
+### Tests unitaires (Mockito)
+
+Fichier : `AnnonceServiceTest.java`
+
+| Test | Vérifie |
+|--|--|
+| `findAll_ShouldReturnPagedList` | La pagination délègue au repository |
+| `findById_WhenFound_...` | Retour de l'Optional correct |
+| `create_ShouldSaveAndReturn` | Le mapper ET le repository sont appelés |
+| `update_WhenAuthorMatches_...` | La mise à jour est persistée |
+| `update_WhenAuthorDiffers_...` | Lève `SecurityException` |
+| `delete_WhenNotArchived_...` | Lève `InvalidStateException` |
+| `delete_WhenAuthorDiffers_...` | Lève `SecurityException` |
+
+```bash
+# Lancer uniquement les tests unitaires
+mvn test
+```
+
+### Tests d'intégration (Testcontainers + MockMvc)
+
+Fichier : `AnnonceIntegrationTest.java` — utilise `@SpringBootTest` + PostgreSQL via Testcontainers.
+
+| Test | Scénario | Code attendu |
+|--|--|--|
+| `testLoginValidCredentials` | POST /auth/login avec bons identifiants | `200 + token` |
+| `testGetAnnoncesWithoutToken` | GET /annonces sans Authorization | `401` |
+| `testGetAnnoncesWithInvalidToken` | GET /annonces avec mauvais token | `401` |
+| `testGetAnnoncesWithValidToken` | GET /annonces avec bon token | `200` |
+| `testCreateAnnonceWithRoleUser` | POST /annonces avec ROLE_USER | `201` |
+| `testDeleteAnnonceWithRoleUser` | DELETE /annonces avec ROLE_USER | `403` |
+| `testDeleteAnnonceWithRoleAdmin` | DELETE /annonces avec ROLE_ADMIN | `204` |
+
+```bash
+# Lancer les tests d'intégration (Docker requis pour Testcontainers)
+mvn verify
+```
+
+> ⚠️ Les tests d'intégration nécessitent Docker Desktop démarré sur la machine.
+
+---
+
+## 📖 Documentation OpenAPI / Swagger
+
+- **Swagger UI** : [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+- **OpenAPI JSON** : [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
+
+Le bouton **"Authorize"** permet de renseigner le token JWT (sans le préfixe `Bearer`).
+
+Tous les endpoints sont annotés avec :
+- `@Operation(summary=...)` — description de l'endpoint
+- `@ApiResponse(responseCode=...)` — codes de retour attendus (200, 201, 400, 401, 403, 404)
+- `@Parameter(description=...)` — description des paramètres
+
+---
+
+## 🩺 Monitoring Actuator
+
+| Endpoint | Description |
+|--|--|
+| `GET /actuator/health` | Statut de l'application (UP/DOWN) + santé PostgreSQL |
+| `GET /actuator/info` | Métadonnées (nom, version) |
+
+```json
+// GET /actuator/health
+{
+  "status": "UP",
+  "components": {
+    "db": { "status": "UP" },
+    "diskSpace": { "status": "UP" }
+  }
+}
+```
+
+---
+
+## 🐳 Docker & Déploiement
+
+### Architecture Docker
+
+```
+┌─────────────────────┐     ┌──────────────────────┐
+│   master_annonce_app│────▶│  master_annonce_db   │
+│   (Spring Boot)     │     │  (PostgreSQL 16)     │
+│   port: 8080        │     │  port: 5432          │
+│                     │     │  volume: postgres_data│
+└─────────────────────┘     └──────────────────────┘
+```
+
+### Dockerfile (multi-stage)
+
+| Stage | Image | Description |
+|--|--|--|
+| `build` | `maven:3.9-eclipse-temurin-17` | Compilation Maven, génération du `.jar` |
+| `runtime` | `eclipse-temurin:17-jre-alpine` | Image finale légère (JRE only, ~100Mo) |
+
+**Sécurité** : l'application tourne sous un utilisateur `spring:spring` (non-root).
+**Healthcheck** : vérifie `/actuator/health` toutes les 30s.
+
+### Variables d'environnement
+
+| Variable | Défaut | Description |
+|--|--|--|
+| `DATABASE_URL` | `jdbc:postgresql://db:5432/master_annonce` | URL JDBC |
+| `DB_USER` | `postgres` | Username PostgreSQL |
+| `DB_PASSWORD` | `postgres` | Password PostgreSQL |
+| `APP_JWT_SECRET` | *(valeur dans app)* | Clé secrète JWT 256-bit |
+
+---
+
+## 🤖 CI/CD — GitHub Actions
+
+**Fichier** : `.github/workflows/ci.yml`
+
+### Déclencheurs
+
+- ✅ `push` sur **toutes les branches**
+- ✅ `pull_request` vers `main`
+
+### Jobs
+
+```
+build-and-test ─────────────────────────────── docker-build (main only)
+│                                                 │
+│  Java 17 + Java 21 (matrix)                    │  Build master-annonce:latest
+│  mvn -B clean verify (JAMAIS -DskipTests)       │
+│  Upload artifact "master-annonce-jar"           │
+```
+
+### Choix de la stratégie DB : Testcontainers ✅
+
+Nous utilisons **Testcontainers** (Option 1 recommandée) plutôt qu'un service PostgreSQL déclaré dans le workflow.
+
+**Justification :**
+
+1. **Reproductibilité parfaite** — Chaque test démarre sa propre instance PostgreSQL vierge dans un conteneur temporaire. Plus aucun risque de pollution de données entre tests.
+
+2. **Cohérence dev-local/CI** — Le développeur qui lance `mvn verify` sur son poste utilise exactement le même mécanisme que la CI. La maxime "ça marche sur ma machine" disparaît.
+
+3. **Simplification du workflow** — Pas de bloc `services:` à maintenir dans le YAML GitHub Actions. La configuration DB est 100% dans le code Java.
+
+4. **Isolation des ports** — Testcontainers choisit un port aléatoire pour chaque test, évitant les conflits sur les runners GitHub.
+
+**Artefact produit** : `master-annonce-jar` (téléchargeable depuis l'onglet "Actions" du workflow)
+
+---
+
+## 🐞 Problèmes Rencontrés & Solutions
+
+### 1. Règles métier d'accès manquantes
+
+**Problème** : Les contrôleurs checkaient l'authentification, mais la vérification "seul l'auteur peut modifier" était absente.
+**Solution** : Implémentation d'une méthode `checkOwnership()` dans `AnnonceService`, levant une `SecurityException` si `annonce.getAuthor().getId() != userId`. Contrôle du statut (`PUBLISHED` → non modifiable) dans la même couche service.
+
+### 2. Erreur `BadCredentials` au login après `docker-compose up --build`
+
+**Problème** : Le `DataInitializer` re-crée les utilisateurs à chaque démarrage. Si le schéma existait déjà avec des données différentes, des conflits de mots de passe BCrypt pouvaient survenir.
+**Solution** : Utilisation de `docker-compose down -v` pour effacer le volume PostgreSQL avant un redémarrage propre. `DataInitializer` vérifie maintenant si l'utilisateur existe (`findByEmail`) avant d'en créer un nouveau.
+
+### 3. `LazyInitializationException` sur les entités JPA
+
+**Problème** : La sérialisation JSON (`AnnonceDTO`) accédait à `annonce.getAuthor().getUsername()` après la fermeture de la session Hibernate.
+**Solution** : Ajout de requêtes avec `JOIN FETCH` dans `AnnonceRepository` (`findAllWithDetails`, `findByIdWithDetails`).
+
+### 4. Tests d'intégration Testcontainers échouent en local
+
+**Problème** : Si Docker Desktop n'est pas démarré, les tests Testcontainers lancent l'erreur `Could not find a valid Docker environment`.
+**Solution** : Les tests d'intégration sont séparés (`*IntegrationTest.java`) et n'ont pas vocation à tourner sans Docker. Dans la CI, Docker est disponible sur les runners `ubuntu-latest`.
+
+### 5. Gestion des imports SpringDoc dans SecurityConfig
+
+**Problème** : Swagger UI renvoyait une `401 Unauthorized`, les routes Swagger n'étaient pas ouvertes.
+**Solution** : Ajout explicite des path patterns `/v3/api-docs/**`, `/swagger-ui/**`, et `/swagger-ui.html` dans la liste `permitAll()` de `SecurityFilterChain`.
+
+---
+
+## 📦 Livrables
+
+| Livrable | Statut | Localisation |
+|--|--|--|
+| Projet Maven complet | ✅ | Ce repository |
+| README complet | ✅ | `README.md` |
+| `docker-compose.yml` | ✅ | Racine du projet |
+| `Dockerfile` multi-stage | ✅ | Racine du projet |
+| CI GitHub Actions | ✅ | `.github/workflows/ci.yml` |
+| Documentation Swagger | ✅ | `/swagger-ui/index.html` |
+| Tests unitaires (Mockito) | ✅ | `src/test/.../service/AnnonceServiceTest.java` |
+| Tests d'intégration (MockMvc+TC) | ✅ | `src/test/.../integration/AnnonceIntegrationTest.java` |
+
+---
 
 ## 📄 Licence
-Projet universitaire - BUT 3 S6.R5 - Développement Avancé
+
+Projet universitaire – BUT 3 S6.R5 – Développement Avancé 2025
