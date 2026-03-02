@@ -1,6 +1,8 @@
 package org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +38,10 @@ public class AnnonceRestController {
 
     @GetMapping
     @Operation(summary = "Get all annonces with pagination")
-    public ResponseEntity<Page<AnnonceDTO>> getAll(Pageable pageable) {
+    @ApiResponse(responseCode = "200", description = "List of annonces retrieved")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    public ResponseEntity<Page<AnnonceDTO>> getAll(
+            @Parameter(description = "Pagination parameters") Pageable pageable) {
         Page<Annonce> annonces = annonceService.findAll(pageable.getPageNumber() + 1, pageable.getPageSize());
         Page<AnnonceDTO> dtoPage = annonces.map(annonceMapper::toDTO);
         return ResponseEntity.ok(dtoPage);
@@ -44,9 +49,11 @@ public class AnnonceRestController {
 
     @GetMapping("/search")
     @Operation(summary = "Search annonces with dynamic filters and pagination")
+    @ApiResponse(responseCode = "200", description = "List of filtered annonces retrieved")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
     public ResponseEntity<Page<AnnonceDTO>> search(
-            @ModelAttribute AnnonceFilterDTO filter,
-            Pageable pageable) {
+            @Parameter(description = "Filters for annonces (q, status, categoryId, etc.)") @ModelAttribute AnnonceFilterDTO filter,
+            @Parameter(description = "Pagination parameters") Pageable pageable) {
 
         Page<Annonce> annonces = annonceService.search(filter, pageable);
         Page<AnnonceDTO> dtoPage = annonces.map(annonceMapper::toDTO);
@@ -56,7 +63,11 @@ public class AnnonceRestController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get annonce by ID")
-    public ResponseEntity<AnnonceDTO> getById(@PathVariable Long id) {
+    @ApiResponse(responseCode = "200", description = "Annonce found")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @ApiResponse(responseCode = "404", description = "Annonce not found")
+    public ResponseEntity<AnnonceDTO> getById(
+            @Parameter(description = "ID of the annonce") @PathVariable Long id) {
         Annonce annonce = annonceService.findByIdWithDetails(id)
                 .orElseThrow(() -> new EntityNotFoundException("Annonce", id));
         return ResponseEntity.ok(annonceMapper.toDTO(annonce));
@@ -64,8 +75,11 @@ public class AnnonceRestController {
 
     @PostMapping
     @Operation(summary = "Create a new annonce")
+    @ApiResponse(responseCode = "201", description = "Annonce created")
+    @ApiResponse(responseCode = "400", description = "Invalid input")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
     public ResponseEntity<AnnonceDTO> create(
-            @Valid @RequestBody AnnonceCreateDTO dto) {
+            @Parameter(description = "Details of the new annonce") @Valid @RequestBody AnnonceCreateDTO dto) {
         User user = getAuthenticatedUser();
 
         Annonce created = annonceService.create(
@@ -89,8 +103,14 @@ public class AnnonceRestController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update completely an existing annonce")
+    @ApiResponse(responseCode = "200", description = "Annonce updated")
+    @ApiResponse(responseCode = "400", description = "Invalid input")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @ApiResponse(responseCode = "403", description = "Forbidden - Not the author")
+    @ApiResponse(responseCode = "404", description = "Annonce not found")
     public ResponseEntity<AnnonceDTO> update(
-            @PathVariable Long id, @Valid @RequestBody AnnonceUpdateDTO dto) {
+            @Parameter(description = "ID of the annonce") @PathVariable Long id,
+            @Parameter(description = "New details") @Valid @RequestBody AnnonceUpdateDTO dto) {
         User user = getAuthenticatedUser();
 
         Annonce updated = annonceService.update(
@@ -111,8 +131,14 @@ public class AnnonceRestController {
 
     @PatchMapping("/{id}")
     @Operation(summary = "Partially update an annonce")
+    @ApiResponse(responseCode = "200", description = "Annonce updated")
+    @ApiResponse(responseCode = "400", description = "Invalid input")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @ApiResponse(responseCode = "403", description = "Forbidden - Not the author")
+    @ApiResponse(responseCode = "404", description = "Annonce not found")
     public ResponseEntity<AnnonceDTO> partialUpdate(
-            @PathVariable Long id, @RequestBody AnnonceUpdateDTO dto) {
+            @Parameter(description = "ID of the annonce") @PathVariable Long id,
+            @Parameter(description = "Fields to update") @RequestBody AnnonceUpdateDTO dto) {
         User user = getAuthenticatedUser();
 
         Annonce existing = annonceService.findByIdWithDetails(id)
@@ -131,7 +157,12 @@ public class AnnonceRestController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete an annonce")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    @ApiResponse(responseCode = "204", description = "Annonce deleted")
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+    @ApiResponse(responseCode = "403", description = "Forbidden - ADMIN only")
+    @ApiResponse(responseCode = "404", description = "Annonce not found")
+    public ResponseEntity<Void> delete(
+            @Parameter(description = "ID of the annonce") @PathVariable Long id) {
         User user = getAuthenticatedUser();
         annonceService.delete(id, user.getId());
         return ResponseEntity.noContent().build(); // HTTP 204

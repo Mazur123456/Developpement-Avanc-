@@ -23,6 +23,17 @@ management:
     health:
       show-details: always
 
+info:
+  app:
+    name: MasterAnnonce API
+    version: 1.0.0
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
+  api-docs:
+    path: /api-docs
+
 logging:
   level:
     root: INFO
