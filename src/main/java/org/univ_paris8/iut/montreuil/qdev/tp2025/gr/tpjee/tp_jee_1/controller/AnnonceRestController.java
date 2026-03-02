@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto.AnnonceCreateDTO;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto.AnnonceDTO;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto.AnnonceFilterDTO;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto.AnnonceUpdateDTO;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.Annonce;
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.entity.User;
@@ -36,18 +37,10 @@ public class AnnonceRestController {
     @GetMapping
     @Operation(summary = "Get all annonces with pagination and optional filters")
     public ResponseEntity<Page<AnnonceDTO>> getAll(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) Long authorId,
-            @RequestParam(required = false) String fromDate,
-            @RequestParam(required = false) String toDate,
+            @ModelAttribute AnnonceFilterDTO filter,
             Pageable pageable) {
 
-        // TODO: Implémenter la recherche avec Specification (attendu par le prompt plus
-        // tard)
-        // Pour l'instant on fait juste le findAll basique avec pageable
-        Page<Annonce> annonces = annonceService.findAll(pageable.getPageNumber() + 1, pageable.getPageSize());
+        Page<Annonce> annonces = annonceService.search(filter, pageable);
         Page<AnnonceDTO> dtoPage = annonces.map(annonceMapper::toDTO);
 
         return ResponseEntity.ok(dtoPage);

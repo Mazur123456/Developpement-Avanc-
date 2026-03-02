@@ -20,6 +20,10 @@ import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.repository.Us
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.domain.Specification;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.dto.AnnonceFilterDTO;
+import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.repository.AnnonceSpecifications;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -162,6 +166,32 @@ public class AnnonceService {
     public Page<Annonce> findAll(int page, int pageSize) {
         Pageable pageable = PageRequest.of(page - 1, pageSize);
         return annonceRepository.findAllWithDetails(pageable);
+    }
+
+    public Page<Annonce> search(AnnonceFilterDTO filter, Pageable pageable) {
+        Specification<Annonce> spec = Specification.where(null);
+        if (filter.getQ() != null && !filter.getQ().isEmpty()) {
+            spec = spec.and(AnnonceSpecifications.hasKeyword(filter.getQ()));
+        }
+        if (filter.getStatus() != null && !filter.getStatus().isEmpty()) {
+            try {
+                AnnonceStatus status = AnnonceStatus.valueOf(filter.getStatus().toUpperCase());
+                spec = spec.and(AnnonceSpecifications.hasStatus(status));
+            } catch (IllegalArgumentException e) {
+                log.warn("Statut invalide pour le filtre: {}", filter.getStatus());
+            }
+        }
+        if (filter.getCategoryId() != null) {
+            spec = spec.and(AnnonceSpecifications.hasCategoryId(filter.getCategoryId()));
+        }
+        if (filter.getAuthorId() != null) {
+            spec = spec.and(AnnonceSpecifications.hasAuthorId(filter.getAuthorId()));
+        }
+        if (filter.getFromDate() != null || filter.getToDate() != null) {
+            spec = spec.and(AnnonceSpecifications.createdBetween(filter.getFromDate(), filter.getToDate()));
+        }
+
+        return annonceRepository.findAll(spec, pageable);
     }
 
     public Page<Annonce> search(String keyword, int page) {
