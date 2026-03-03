@@ -32,6 +32,16 @@ import com.jayway.jsonpath.JsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/**
+ * Tests d'intégration MockMvc + Testcontainers.
+ *
+ * IMPORTANT : MockMvc avec @SpringBootTest n'applique PAS automatiquement le
+ * server.servlet.context-path dans les appels perform(). On surcharge le
+ * context-path
+ * à "/" dans @DynamicPropertySource pour que les chemins dans les tests
+ * correspondent
+ * directement aux @RequestMapping des controllers (ex: /auth/login, /annonces).
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
@@ -49,6 +59,10 @@ public class AnnonceIntegrationTest {
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        // Désactiver le context-path pour les tests MockMvc
+        // Les chemins des tests correspondent directement aux @RequestMapping (sans
+        // /api)
+        registry.add("server.servlet.context-path", () -> "/");
     }
 
     @Autowired
@@ -72,14 +86,14 @@ public class AnnonceIntegrationTest {
 
     @BeforeEach
     void setup() throws Exception {
-        // DataInitializer sets up admin@test.com / Admin1234!
-        // and user@user.com / password
+        // DataInitializer injecte : admin@test.com / Admin1234! et user@user.com /
+        // password
 
-        // 1. Get Admin Token
+        // 1. Token admin
         LoginDTO adminLogin = new LoginDTO();
         adminLogin.setEmail("admin@test.com");
         adminLogin.setPassword("Admin1234!");
-        MvcResult adminResult = mockMvc.perform(post("/api/auth/login")
+        MvcResult adminResult = mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(adminLogin)))
                 .andReturn();
@@ -88,11 +102,11 @@ public class AnnonceIntegrationTest {
             adminToken = JsonPath.read(content, "$.token");
         }
 
-        // 2. Get User Token
+        // 2. Token user
         LoginDTO userLogin = new LoginDTO();
         userLogin.setEmail("user@user.com");
         userLogin.setPassword("password");
-        MvcResult userResult = mockMvc.perform(post("/api/auth/login")
+        MvcResult userResult = mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userLogin)))
                 .andReturn();
@@ -101,7 +115,7 @@ public class AnnonceIntegrationTest {
             userToken = JsonPath.read(content, "$.token");
         }
 
-        // 3. Prepare Category for Annonce creation tests
+        // 3. Préparer une catégorie pour les tests de création
         List<Category> categories = categoryRepository.findAll();
         if (categories.isEmpty()) {
             Category newCat = Category.builder().label("Test Category").build();
@@ -118,7 +132,7 @@ public class AnnonceIntegrationTest {
         loginDto.setEmail("admin@test.com");
         loginDto.setPassword("Admin1234!");
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginDto)))
                 .andExpect(status().isOk())
@@ -165,7 +179,6 @@ public class AnnonceIntegrationTest {
 
     @Test
     void testDeleteAnnonceWithRoleUser_Returns403() throws Exception {
-        // Prepare an annonce by admin
         User adminUser = userRepository.findByEmail("admin@test.com").get();
         Category cat = categoryRepository.findById(categoryId).get();
         Annonce adminAnnonce = annonceRepository.save(
@@ -177,7 +190,6 @@ public class AnnonceIntegrationTest {
                         .status(AnnonceStatus.ARCHIVED)
                         .build());
 
-        // Standard USER tries to delete (fails at SecurityConfig authorization)
         mockMvc.perform(delete("/annonces/" + adminAnnonce.getId())
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken))
                 .andExpect(status().isForbidden());
@@ -185,7 +197,6 @@ public class AnnonceIntegrationTest {
 
     @Test
     void testDeleteAnnonceWithRoleAdmin_Returns204() throws Exception {
-        // Prepare an annonce by admin
         User adminUser = userRepository.findByEmail("admin@test.com").get();
         Category cat = categoryRepository.findById(categoryId).get();
         Annonce adminAnnonce = annonceRepository.save(
@@ -197,7 +208,6 @@ public class AnnonceIntegrationTest {
                         .status(AnnonceStatus.ARCHIVED)
                         .build());
 
-        // ADMIN tries to delete (authorized by SecurityConfig + owns the item)
         mockMvc.perform(delete("/annonces/" + adminAnnonce.getId())
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isNoContent()); // HTTP 204
