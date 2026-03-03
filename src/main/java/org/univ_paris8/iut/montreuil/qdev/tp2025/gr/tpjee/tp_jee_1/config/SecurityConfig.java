@@ -56,7 +56,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/auth/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        // SpringDoc : chemin par défaut + chemin personnalisé configuré dans
+                        // application.yml
+                        .requestMatchers("/v3/api-docs/**", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                        .permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/categories/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/annonces/**", "/annonces/**")
                         .hasRole("ADMIN")

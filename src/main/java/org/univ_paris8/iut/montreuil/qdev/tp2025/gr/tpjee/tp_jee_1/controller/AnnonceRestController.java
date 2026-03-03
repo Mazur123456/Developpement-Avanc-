@@ -24,7 +24,9 @@ import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service.Annon
 import org.univ_paris8.iut.montreuil.qdev.tp2025.gr.tpjee.tp_jee_1.service.UserService;
 
 import java.net.URI;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/annonces")
@@ -36,12 +38,19 @@ public class AnnonceRestController {
     private final UserService userService;
     private final AnnonceMapper annonceMapper;
 
+    /** Champs triables valides, calculés par réflexion sur l'entité Annonce. */
+    private static final Set<String> SORTABLE_FIELDS = Arrays.stream(Annonce.class.getDeclaredFields())
+            .map(java.lang.reflect.Field::getName)
+            .collect(Collectors.toSet());
+
     @GetMapping
     @Operation(summary = "Get all annonces with pagination")
     @ApiResponse(responseCode = "200", description = "List of annonces retrieved")
+    @ApiResponse(responseCode = "400", description = "Invalid sort field")
     @ApiResponse(responseCode = "401", description = "Unauthorized")
     public ResponseEntity<Page<AnnonceDTO>> getAll(
             @Parameter(description = "Pagination parameters") Pageable pageable) {
+        validateSort(pageable);
         Page<Annonce> annonces = annonceService.findAll(pageable.getPageNumber() + 1, pageable.getPageSize());
         Page<AnnonceDTO> dtoPage = annonces.map(annonceMapper::toDTO);
         return ResponseEntity.ok(dtoPage);
@@ -180,5 +189,21 @@ public class AnnonceRestController {
         return userService.findById(userDetails.getId())
                 .orElseThrow(
                         () -> new org.springframework.security.access.AccessDeniedException("Utilisateur introuvable"));
+    }
+
+    /**
+     * Valide que les propriétés de tri de la requête correspondent
+     * à des champs réels de l'entité Annonce (via réflexion Java).
+     * Lève une IllegalArgumentException (→ HTTP 400) si un champ inconnu est
+     * fourni.
+     */
+    private void validateSort(Pageable pageable) {
+        pageable.getSort().forEach(order -> {
+            String property = order.getProperty();
+            if (!SORTABLE_FIELDS.contains(property)) {
+                throw new IllegalArgumentException(
+                        "Champ de tri invalide : '" + property + "'. Champs autorisés : " + SORTABLE_FIELDS);
+            }
+        });
     }
 }

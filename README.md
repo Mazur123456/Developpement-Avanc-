@@ -113,7 +113,9 @@ docker-compose up --build
 docker-compose down -v && docker-compose up --build
 ```
 
-L'application est disponible sur **http://localhost:8080**
+L'application est disponible sur **http://localhost:8080/api**
+
+> ⚠️ **Context-path** : toutes les URLs sont préfixées par `/api` (configuré dans `application.yml`).
 
 ### Lancement local (avec PostgreSQL installé)
 
@@ -141,7 +143,7 @@ mvn spring-boot:run
 
 ## 📡 Endpoints API
 
-> **Base URL** : `http://localhost:8080`
+> **Base URL** : `http://localhost:8080/api`
 > Pour tous les endpoints protégés, ajouter le header : `Authorization: Bearer <token>`
 
 ### 🔐 Authentification
@@ -337,8 +339,8 @@ mvn verify
 
 ## 📖 Documentation OpenAPI / Swagger
 
-- **Swagger UI** : [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-- **OpenAPI JSON** : [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
+- **Swagger UI** : [http://localhost:8080/api/swagger-ui/index.html](http://localhost:8080/api/swagger-ui/index.html)
+- **OpenAPI JSON** : [http://localhost:8080/api/api-docs](http://localhost:8080/api/api-docs)
 
 Le bouton **"Authorize"** permet de renseigner le token JWT (sans le préfixe `Bearer`).
 
@@ -355,6 +357,10 @@ Tous les endpoints sont annotés avec :
 |--|--|
 | `GET /actuator/health` | Statut de l'application (UP/DOWN) + santé PostgreSQL |
 | `GET /actuator/info` | Métadonnées (nom, version) |
+
+**URLs complètes :**
+- [http://localhost:8080/api/actuator/health](http://localhost:8080/api/actuator/health)
+- [http://localhost:8080/api/actuator/info](http://localhost:8080/api/actuator/info)
 
 ```json
 // GET /actuator/health
@@ -466,6 +472,18 @@ Nous utilisons **Testcontainers** (Option 1 recommandée) plutôt qu'un service 
 
 **Problème** : Swagger UI renvoyait une `401 Unauthorized`, les routes Swagger n'étaient pas ouvertes.
 **Solution** : Ajout explicite des path patterns `/v3/api-docs/**`, `/swagger-ui/**`, et `/swagger-ui.html` dans la liste `permitAll()` de `SecurityFilterChain`.
+
+> ℹ️ **Note** : Les erreurs `401` visibles dans les logs lorsqu'on accède à Swagger UI sont **normales**. Swagger effectue quelques sondes sans token pour découvrir les endpoints publics avant de charger l'UI.
+
+### 6. Schéma PostgreSQL incompatible après mise à jour Spring Boot 3.4.3
+
+**Problème** : Lors du passage de Spring Boot `3.2.5` à `3.4.3`, la version d'Hibernate est passée de `6.4` à `6.6`. Hibernate 6.6 effectue une validation de schéma plus stricte (`ddl-auto: validate`) et rejetait le schéma existant, causant un crash au démarrage (`org.hibernate.tool.schema.spi.SchemaManagementException`).
+**Solution** : Migration vers `ddl-auto: update`. Hibernate adapte automatiquement le schéma existant sans le détruire. Toujours lancer `docker-compose down -v` avant un rebuild propre.
+
+### 7. Avertissement `version` obsolète dans docker-compose.yml
+
+**Problème** : Docker Compose v2+ ne reconnaît plus le champ `version: '3.8'` au niveau racine du fichier. Il l'ignore avec un avertissement.
+**Solution** : Suppression de la clé `version` du `docker-compose.yml`.
 
 ---
 
